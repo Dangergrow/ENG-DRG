@@ -40,6 +40,7 @@
             <button onclick="setProvider('openai')" class="btn btn-ghost btn-sm" style="font-size:10px">OpenAI</button>
             <button onclick="setProvider('deepseek')" class="btn btn-ghost btn-sm" style="font-size:10px">DeepSeek</button>
             <button onclick="setProvider('gigachat')" class="btn btn-ghost btn-sm" style="font-size:10px">GigaChat</button>
+            <button onclick="setProvider('gemini')" class="btn btn-ghost btn-sm" style="font-size:10px">Gemini</button>
             <button onclick="setProvider('groq')" class="btn btn-ghost btn-sm" style="font-size:10px">Groq</button>
             <button onclick="setProvider('together')" class="btn btn-ghost btn-sm" style="font-size:10px">Together</button>
             <button onclick="setProvider('mistral')" class="btn btn-ghost btn-sm" style="font-size:10px">Mistral</button>
@@ -113,7 +114,7 @@ function setProvider(p) {
         gigachat: {url:'https://gigachat.devices.sberbank.ru/api/v1', model:'GigaChat'},
         mistral: {url:'https://api.mistral.ai/v1', model:'mistral-small-latest'},
         perplexity: {url:'https://api.perplexity.ai', model:'sonar-pro'},
-        fireworks: {url:'https://api.fireworks.ai/inference/v1', model:'accounts/fireworks/models/llama-v3p1-70b-instruct'},
+        gemini: {url:'https://generativelanguage.googleapis.com/v1beta/openai/', model:'gemini-2.0-flash'},
         custom: {url:'', model:''}
     };
     const pr = presets[p];
