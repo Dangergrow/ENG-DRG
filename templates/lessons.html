@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="lessons-page">
+    <h1>📚 Уроки английского</h1>
+    <div class="guide">
+        <div class="guide-title">ℹ️ Как проходить уроки</div>
+        Выбери свой уровень → кликни на урок → ИИ объяснит тему с примерами и практикой. После урока сдай тест (4/5) — урок зачтётся.
+        <strong>Совет:</strong> проходи 1 урок в день — это оптимальный темп.
+    </div>
+    <p style="color:var(--text2);font-size:14px">Полная программа от A0 до C2.</p>
+
+    <div class="lvl-tabs">
+        {% for lv in level_order %}
+        <button class="lvl-tab {% if lv == level %}active{% endif %}" onclick="showLevel('{{ lv }}')">
+            {{ lv }}<br><small>{{ level_names[lv] }}</small>
+        </button>
+        {% endfor %}
+    </div>
+
+    {% for lv in level_order %}
+    <div id="level-{{ lv }}" {% if lv != level %}style="display:none"{% endif %}>
+        <h2 style="margin:14px 0 10px">{{ lv }} — {{ level_names[lv] }}</h2>
+        <div class="lesson-grid">
+            {% for lesson in all_lessons[lv] %}
+            <div class="lesson-card" onclick="loadLesson('{{ lesson.id }}','{{ lesson.title }}')">
+                <div class="lc-icon">📝</div>
+                <div class="lc-title">{{ lesson.title }}</div>
+                <div class="lc-lvl">{{ lv }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+
+    <div class="card modal" id="lesson-modal">
+        <div class="modal-header">
+            <h2 id="modal-title"></h2>
+            <button class="modal-close" onclick="document.getElementById('lesson-modal').style.display='none'">✕</button>
+        </div>
+        <div class="modal-content" id="modal-content"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showLevel(lv) {
+    document.querySelectorAll('[id^="level-"]').forEach(b => b.style.display = 'none');
+    document.querySelectorAll('.lvl-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('level-' + lv).style.display = 'block';
+    event.target.closest('.lvl-tab')?.classList.add('active') ||
+        document.querySelectorAll('.lvl-tab')[['A0','A1','A2','B1','B2','C1','C2'].indexOf(lv)]?.classList.add('active');
+}
+function loadLesson(id, title) {
+    const m = document.getElementById('lesson-modal'), mc = document.getElementById('modal-content');
+    document.getElementById('modal-title').textContent = title;
+    mc.innerHTML = '<div class="spinner">Загружаю урок...</div>';
+    m.style.display = 'block'; m.scrollIntoView({behavior:'smooth'});
+    fetch('/api/lesson/'+id+'?stream=1').then(resp=>{
+        const reader=resp.body.getReader(),dec=new TextDecoder();let full='';
+        (function read(){reader.read().then(({done,value})=>{
+            if(done)return;
+            for(const line of dec.decode(value,{stream:true}).split('\n')){
+                if(!line.startsWith('data: '))continue;
+                try{const d=JSON.parse(line.slice(6));
+                    if(d.token){full+=d.token;mc.innerHTML='<div class="modal-content">'+formatMD(full)+'<span class="cursor-blink">|</span></div>';}
+                    if(d.done){mc.innerHTML='<div class="modal-content">'+formatMD(d.full)+'</div><button class="btn btn-accent" onclick="loadQuiz(\''+id+'\',\''+title+'\')">✅ Завершить урок (тест)</button>';}
+                }catch(e){}
+            }read();})})();
+    }).catch(()=>{mc.innerHTML='<p>Ошибка.</p>';});
+}
+function loadQuiz(id, title) {
+    const mc = document.getElementById('modal-content');
+    mc.innerHTML = '<div class="spinner">Составляю тест...</div>';
+    fetch('/api/quiz/'+id).then(r=>r.json()).then(d=>{
+        let quiz = typeof d.quiz==='string' ? JSON.parse(d.quiz.replace(/```json|```/g,'').trim()) : d.quiz;
+        if (!quiz || !quiz.length) { mc.innerHTML='<p>Не удалось загрузить тест.</p>'; return; }
+        let html = '<div class="quiz-block"><h3>📝 Тест по уроку</h3><p style="color:var(--text2);font-size:13px;margin-bottom:16px">Нужно 4/5 для зачёта.</p>';
+        quiz.forEach((q,i)=>{
+            html+='<div class="q-card" style="margin-bottom:12px;padding:16px"><div class="q-badge">Вопрос '+(i+1)+'</div><div class="q-text" style="font-size:15px">'+q.q+'</div><div class="q-opts">';
+            q.opts.forEach((o,j)=>{html+='<label class="q-opt"><input type="radio" name="qz'+i+'" value="'+j+'" onchange="selOpt(this)"><span>'+o+'</span></label>';});
+            html+='</div></div>';
+        });
+        const cm={}; quiz.forEach((q,i)=>{cm[i]=q.ans;});
+        html+='<button class="btn btn-accent btn-large" onclick="submitQuiz(\''+id+'\',\''+title+'\','+JSON.stringify(cm)+')">📤 Сдать тест</button></div>';
+        mc.innerHTML = html;
+    });
+}
+function selOpt(el){el.closest('.q-opts').querySelectorAll('.q-opt').forEach(e=>e.classList.remove('sel'));el.closest('.q-opt').classList.add('sel');}
+function submitQuiz(id,title,correct){
+    const ans={}; for(let i=0;i<Object.keys(correct).length;i++){const s=document.querySelector('input[name="qz'+i+'"]:checked');if(s)ans[i]=parseInt(s.value);}
+    fetch('/api/quiz/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lesson_id:id,title:title,answers:ans,correct:correct})})
+    .then(r=>r.json()).then(d=>{
+        const mc=document.getElementById('modal-content');
+        if(d.passed){mc.innerHTML='<div style="text-align:center;padding:30px"><div style="font-size:48px">🎉</div><h3>Сдано! '+d.score+'/'+d.total+'</h3><p style="color:var(--accent)">+XP</p><button class="btn btn-accent btn-large" style="margin-top:14px" onclick="document.getElementById(\'lesson-modal\').style.display=\'none\';location.reload()">👍</button></div>';}
+        else{mc.innerHTML='<div style="text-align:center;padding:30px"><h3>Не сдано: '+d.score+'/'+d.total+'</h3><p style="color:var(--text2)">Нужно 4/5.</p><button class="btn btn-accent" style="margin-top:14px" onclick="loadLesson(\''+id+'\',\''+title+'\')">🔄 Повторить</button></div>';}
+    });
+}
+</script>
+{% endblock %}

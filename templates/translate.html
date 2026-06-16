@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="tool-page">
+    <h1>🔤 Переводчик</h1>
+    <div class="guide">
+        <div class="guide-title">ℹ️ Как пользоваться</div>
+        Введи текст на русском или английском → выбери направление → нажми «Перевести».
+        ИИ не только переведёт, но и разберёт лексику и предложит альтернативные варианты.
+    </div>
+    <p class="subtitle">Перевод с разбором лексики и альтернативными вариантами.</p>
+
+    <div class="card">
+        <div class="tool-row">
+            <select id="direction" class="mode-select">
+                <option value="ru-en">🇷🇺 Русский → 🇬🇧 Английский</option>
+                <option value="en-ru">🇬🇧 Английский → 🇷🇺 Русский</option>
+            </select>
+        </div>
+        <div class="tool-row">
+            <textarea id="input-text" placeholder="Введи текст для перевода..."></textarea>
+        </div>
+        <button class="btn btn-primary btn-large" onclick="translateText()">🔤 Перевести</button>
+        <div class="tool-result" id="result"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function translateText() {
+    const text = document.getElementById('input-text').value.trim();
+    if (!text) { alert('Введи текст!'); return; }
+    const dir = document.getElementById('direction').value;
+    const res = document.getElementById('result');
+    res.style.display = 'block';
+    res.innerHTML = '<div class="spinner">Перевожу...</div>';
+    fetch('/api/translate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({text: text, direction: dir})
+    })
+    .then(r => r.json())
+    .then(d => { res.innerHTML = formatMD(d.result); });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>📊 Статистика и прогресс</h1>
+<div class="guide">
+    <div class="guide-title">ℹ️ Как это работает</div>
+    Занимайся каждый день — streak растёт. Проходи уроки, общайся в чате, играй в игры — получай XP.
+    Собирай достижения: чем больше значков, тем выше твой уровень владения языком.
+</div>
+
+<div class="stats-grid" style="margin-top:16px">
+    <div class="stat-big"><div class="big-val">{{ stats.streak }}</div><div class="big-lbl">🔥 Дней подряд</div></div>
+    <div class="stat-big"><div class="big-val">{{ stats.words_total }}</div><div class="big-lbl">📖 Всего слов</div></div>
+    <div class="stat-big"><div class="big-val">{{ stats.words_mastered }}</div><div class="big-lbl">✅ Выучено</div></div>
+    <div class="stat-big"><div class="big-val">{{ stats.lessons_completed }}</div><div class="big-lbl">📚 Уроков</div></div>
+    <div class="stat-big"><div class="big-val">{{ stats.total_messages }}</div><div class="big-lbl">💬 Сообщений</div></div>
+    <div class="stat-big"><div class="big-val">{{ stats.xp }}</div><div class="big-lbl">⭐ XP</div></div>
+</div>
+
+<div class="card">
+    <div class="card-header"><h2>🏆 Достижения (22)</h2></div>
+    <div class="achievements">
+        <div class="ach {{ 'done' if stats.streak >= 3 else 'locked' }}"><span class="ach-icon">{{ '🔥' if stats.streak >= 3 else '🔒' }}</span>3 дня streak</div>
+        <div class="ach {{ 'done' if stats.streak >= 7 else 'locked' }}"><span class="ach-icon">{{ '🔥' if stats.streak >= 7 else '🔒' }}</span>7 дней streak</div>
+        <div class="ach {{ 'done' if stats.streak >= 14 else 'locked' }}"><span class="ach-icon">{{ '🔥' if stats.streak >= 14 else '🔒' }}</span>14 дней streak</div>
+        <div class="ach {{ 'done' if stats.streak >= 30 else 'locked' }}"><span class="ach-icon">{{ '🔥' if stats.streak >= 30 else '🔒' }}</span>30 дней streak</div>
+        <div class="ach {{ 'done' if stats.words_total >= 10 else 'locked' }}"><span class="ach-icon">{{ '📖' if stats.words_total >= 10 else '🔒' }}</span>10 слов</div>
+        <div class="ach {{ 'done' if stats.words_total >= 50 else 'locked' }}"><span class="ach-icon">{{ '📖' if stats.words_total >= 50 else '🔒' }}</span>50 слов</div>
+        <div class="ach {{ 'done' if stats.words_total >= 100 else 'locked' }}"><span class="ach-icon">{{ '📖' if stats.words_total >= 100 else '🔒' }}</span>100 слов</div>
+        <div class="ach {{ 'done' if stats.words_mastered >= 10 else 'locked' }}"><span class="ach-icon">{{ '✅' if stats.words_mastered >= 10 else '🔒' }}</span>10 выучено</div>
+        <div class="ach {{ 'done' if stats.words_mastered >= 30 else 'locked' }}"><span class="ach-icon">{{ '✅' if stats.words_mastered >= 30 else '🔒' }}</span>30 выучено</div>
+        <div class="ach {{ 'done' if stats.words_mastered >= 100 else 'locked' }}"><span class="ach-icon">{{ '✅' if stats.words_mastered >= 100 else '🔒' }}</span>100 выучено</div>
+        <div class="ach {{ 'done' if stats.lessons_completed >= 1 else 'locked' }}"><span class="ach-icon">{{ '📚' if stats.lessons_completed >= 1 else '🔒' }}</span>1 урок</div>
+        <div class="ach {{ 'done' if stats.lessons_completed >= 5 else 'locked' }}"><span class="ach-icon">{{ '📚' if stats.lessons_completed >= 5 else '🔒' }}</span>5 уроков</div>
+        <div class="ach {{ 'done' if stats.lessons_completed >= 10 else 'locked' }}"><span class="ach-icon">{{ '📚' if stats.lessons_completed >= 10 else '🔒' }}</span>10 уроков</div>
+        <div class="ach {{ 'done' if stats.lessons_completed >= 25 else 'locked' }}"><span class="ach-icon">{{ '📚' if stats.lessons_completed >= 25 else '🔒' }}</span>25 уроков</div>
+        <div class="ach {{ 'done' if stats.total_messages >= 10 else 'locked' }}"><span class="ach-icon">{{ '💬' if stats.total_messages >= 10 else '🔒' }}</span>10 сообщений</div>
+        <div class="ach {{ 'done' if stats.total_messages >= 50 else 'locked' }}"><span class="ach-icon">{{ '💬' if stats.total_messages >= 50 else '🔒' }}</span>50 сообщений</div>
+        <div class="ach {{ 'done' if stats.total_messages >= 100 else 'locked' }}"><span class="ach-icon">{{ '💬' if stats.total_messages >= 100 else '🔒' }}</span>100 сообщений</div>
+        <div class="ach {{ 'done' if stats.xp >= 100 else 'locked' }}"><span class="ach-icon">{{ '⭐' if stats.xp >= 100 else '🔒' }}</span>100 XP</div>
+        <div class="ach {{ 'done' if stats.xp >= 500 else 'locked' }}"><span class="ach-icon">{{ '⭐' if stats.xp >= 500 else '🔒' }}</span>500 XP</div>
+        <div class="ach {{ 'done' if stats.xp >= 2000 else 'locked' }}"><span class="ach-icon">{{ '⭐' if stats.xp >= 2000 else '🔒' }}</span>2000 XP</div>
+        <div class="ach {{ 'done' if user.level in ('B1','B2','C1','C2') else 'locked' }}"><span class="ach-icon">{{ '🚀' if user.level in ('B1','B2','C1','C2') else '🔒' }}</span>Уровень B1+</div>
+        <div class="ach {{ 'done' if user.level in ('C1','C2') else 'locked' }}"><span class="ach-icon">{{ '👑' if user.level in ('C1','C2') else '🔒' }}</span>Уровень C1+</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><h2>📈 Шкала уровней CEFR</h2></div>
+    <div style="display:flex;align-items:flex-start;padding:24px 0;position:relative">
+        <div style="position:absolute;top:32px;left:28px;right:28px;height:3px;background:var(--border2);z-index:0"></div>
+        {% set levels = ['A0','A1','A2','B1','B2','C1','C2'] %}
+        {% set ci = levels.index(user.level) if user.level and user.level in levels else -1 %}
+        {% for lv in levels %}
+        <div style="flex:1;text-align:center;position:relative;z-index:1">
+            <div style="width:40px;height:40px;border-radius:50%;background:{% if levels.index(lv)<=ci %}var(--accent){% elif levels.index(lv)==ci+1 %}{% else %}var(--surface2){% endif %};border:3px solid {% if levels.index(lv)<ci %}var(--accent){% elif levels.index(lv)==ci %}var(--primary2){% elif levels.index(lv)==ci+1 %}var(--primary2){% else %}var(--border2){% endif %};display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:11px;font-weight:800;color:{% if levels.index(lv)<=ci %}#000{% else %}var(--text3){% endif %};transition:all .3s;{% if levels.index(lv)==ci+1 %}animation:pulse-dot 2s infinite{% endif %}{% if levels.index(lv)==ci %}box-shadow:0 0 24px rgba(139,108,255,.5);transform:scale(1.15){% endif %}">{{ lv }}</div>
+            <div style="font-size:12px;color:var(--text3);font-weight:600">{{ lv }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

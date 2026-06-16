@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block content %}
+{% if not has_level %}
+<div class="hero" style="text-align:center;padding:80px 20px 50px">
+    <h1 style="font-size:46px;font-weight:800;letter-spacing:-1.5px;line-height:1.1" id="hero-title">
+        Выучи английский<br>со <span style="color:var(--success)">своим ИИ-учителем</span>
+    </h1>
+    <p style="color:var(--t2);font-size:18px;margin:20px 0 32px">От нуля до свободного владения. Умная система подстраивается под тебя.</p>
+    <a href="/placement" class="btn btn-accent btn-lg">🎯 Пройти тест и узнать уровень</a>
+    <div class="hero-steps" style="display:flex;gap:16px;justify-content:center;margin:48px 0;flex-wrap:wrap">
+        {% for step in [('1','Тест','10 минут'),('2','Уроки','по уровню'),('3','Разговор','практика'),('4','Свободный','английский')] %}
+        <div class="glass superellipse" style="width:170px;padding:28px 20px;text-align:center;transition:all var(--tm);border-radius:var(--radius)" onmouseover="Spring.bounce(this)" onmouseout="this.style.transform=''">
+            <div style="font-size:32px;font-weight:800;color:var(--accent-2);margin-bottom:6px">{{ step[0] }}</div>
+            <div style="font-size:13px;color:var(--t2);line-height:1.4">{{ step[1] }}<br>{{ step[2] }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:8px">
+        <h1 style="font-size:28px;font-weight:700" id="greeting">Привет, {{ user.name }}!</h1>
+        <div class="blob" id="level-blob">{{ level_names.get(user.level, user.level) }} ({{ user.level }})</div>
+    </div>
+    <div class="xp-wrap">
+        <div class="xp-bar"><div class="xp-fill" id="xp-fill" data-xp="{{ user.xp }}" style="width:{{ (user.xp % 500) / 500 * 100 }}%"></div></div>
+        <span style="font-size:13px;font-weight:700;color:var(--accent-2)" id="xp-text">{{ user.xp }} XP</span>
+        <span style="font-size:12px;color:var(--t3)">🔥 {{ user.streak }} дн.</span>
+    </div>
+    {% if new_achievements %}
+    <div style="margin-top:12px;padding:12px 18px;background:color-mix(in oklch, var(--success) 5%, transparent);border:1px solid color-mix(in oklch, var(--success) 25%, transparent);border-radius:var(--radius);font-size:13px" id="new-ach-banner">
+        🎉 Новые достижения разблокированы! +{{ new_achievements|length * 50 }} XP
+    </div>
+    {% endif %}
+</div>
+
+<div class="stats-row">
+    <div class="stat-box"><div class="stat-icon">🔥</div><div class="stat-num" data-count="{{ stats.streak }}">{{ stats.streak }}</div><div class="stat-lbl">дней подряд</div></div>
+    <div class="stat-box"><div class="stat-icon">📖</div><div class="stat-num" data-count="{{ stats.words_total }}">{{ stats.words_total }}</div><div class="stat-lbl">слов</div></div>
+    <div class="stat-box"><div class="stat-icon">✅</div><div class="stat-num" data-count="{{ stats.lessons_completed }}">{{ stats.lessons_completed }}</div><div class="stat-lbl">уроков</div></div>
+    <div class="stat-box"><div class="stat-icon">💬</div><div class="stat-num" data-count="{{ stats.total_messages }}">{{ stats.total_messages }}</div><div class="stat-lbl">сообщений</div></div>
+</div>
+
+<!-- 🗺 Дорожная карта -->
+<div class="card">
+    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h2>🗺 Твоя дорожная карта</h2>
+        <span style="font-size:12px;color:var(--t3)">A0 → C2</span>
+    </div>
+    <div class="roadmap">
+        <div class="roadmap-line"></div>
+        {% set levels = ['A0','A1','A2','B1','B2','C1','C2'] %}
+        {% set ci = levels.index(user.level) if user.level and user.level in levels else -1 %}
+        {% for lv in levels %}
+        <div class="rm-step {{ 'rm-done' if levels.index(lv) < ci else '' }} {{ 'rm-curr' if lv == user.level else '' }} {{ 'rm-next' if levels.index(lv) == ci+1 else '' }}">
+            <div class="rm-dot">{{ lv }}</div>
+            <div class="rm-lbl">{{ lv }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="grid-2">
+    <!-- Уроки -->
+    <div class="card">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <h2>📚 Уроки {{ user.level }}</h2>
+            <span style="font-size:12px;color:var(--t3)">{{ lessons|length }} тем</span>
+        </div>
+        <div class="lesson-list">
+        {% for lesson in lessons %}
+        <div class="lesson-row" onclick="loadLesson('{{ lesson.id }}','{{ lesson.title }}')">
+            <div class="lesson-num">{{ loop.index }}</div>
+            <div class="lesson-title">{{ lesson.title }}</div>
+            <div class="lesson-arrow">→</div>
+        </div>
+        {% endfor %}
+        {% if not lessons %}<div class="empty" style="text-align:center;padding:40px;color:var(--t2)"><a href="/placement">Пройти тест заново</a></div>{% endif %}
+        </div>
+    </div>
+
+    <!-- Рекомендации -->
+    <div class="card">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h2>💡 Рекомендации</h2></div>
+        {% set ci = ['A0','A1','A2','B1','B2','C1','C2'].index(user.level) if user.level and user.level in ['A0','A1','A2','B1','B2','C1','C2'] else 1 %}
+        {% if ci <= 1 %}
+        <div class="glass" style="border-radius:var(--radius);padding:14px 16px;margin-bottom:8px;display:flex;gap:10px"><span style="font-size:24px">📖</span><span style="font-size:13px;color:var(--t2)"><strong style="color:var(--t1)">Начни с алфавита.</strong> Уроки A0 — фундамент.</span></div>
+        <div class="glass" style="border-radius:var(--radius);padding:14px 16px;margin-bottom:8px;display:flex;gap:10px"><span style="font-size:24px">🎤</span><span style="font-size:13px;color:var(--t2)"><strong style="color:var(--t1)">Повторяй вслух.</strong> В Произношении слушай и повторяй.</span></div>
+        {% elif ci <= 2 %}
+        <div class="glass" style="border-radius:var(--radius);padding:14px 16px;margin-bottom:8px;display:flex;gap:10px"><span style="font-size:24px">📚</span><span style="font-size:13px;color:var(--t2)"><strong style="color:var(--t1)">Пройди уроки A2.</strong> Past Simple и Future — ключ к общению.</span></div>
+        <div class="glass" style="border-radius:var(--radius);padding:14px 16px;margin-bottom:8px;display:flex;gap:10px"><span style="font-size:24px">💬</span><span style="font-size:13px;color:var(--t2)"><strong style="color:var(--t1)">Практикуй разговор.</strong> 15 минут в чате каждый день.</span></div>
+        {% elif ci <= 3 %}
+        <div class="glass" style="border-radius:var(--radius);padding:14px 16px;margin-bottom:8px;display:flex;gap:10px"><span style="font-size:24px">🔥</span><span style="font-size:13px;color:var(--t2)"><strong style="color:var(--t1)">Present Perfect.</strong> Главное время B1 — без него не перейти.</span></div>
+        <div class="glass" style="border-radius:var(--radius);padding:14px 16px;margin-bottom:8px;display:flex;gap:10px"><span style="font-size:24px">📈</span><span style="font-size:13px;color:var(--t2)"><strong style="color:var(--t1)">Сдай тест на B2.</strong> Если уверен — в «Тест уровня».</span></div>
+        {% else %}
+        <div class="glass" style="border-radius:var(--radius);padding:14px 16px;margin-bottom:8px;display:flex;gap:10px"><span style="font-size:24px">👑</span><span style="font-size:13px;color:var(--t2)"><strong style="color:var(--t1)">Продвинутый уровень!</strong> Оттачивай нюансы и регистры.</span></div>
+        <div class="glass" style="border-radius:var(--radius);padding:14px 16px;margin-bottom:8px;display:flex;gap:10px"><span style="font-size:24px">🌍</span><span style="font-size:13px;color:var(--t2)"><strong style="color:var(--t1)">Смотри фильмы.</strong> Без субтитров — ты готов.</span></div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="guide">
+    <div class="guide-title">📘 Как обучаться</div>
+    <strong>1.</strong> Урок → тест (4/5) → урок зачтён. <strong>2.</strong> Разговорный клуб — главный навык. <strong>3.</strong> Добавляй слова в Словарь. <strong>4.</strong> Игры для закрепления. <strong>5.</strong> Тест уровня для перехода.
+</div>
+
+<div class="actions-grid">
+    <a href="/chat" class="action-card"><div class="ac-icon">💬</div><div class="ac-title">Разговорный клуб</div><div class="ac-sub">Голос + озвучка</div></a>
+    <a href="/translate" class="action-card"><div class="ac-icon">🔤</div><div class="ac-title">Переводчик</div><div class="ac-sub">С разбором</div></a>
+    <a href="/pronounce" class="action-card"><div class="ac-icon">🗣</div><div class="ac-title">Произношение</div><div class="ac-sub">Транскрипция</div></a>
+    <a href="/writing" class="action-card"><div class="ac-icon">✍️</div><div class="ac-title">Письмо</div><div class="ac-sub">Проверка текстов</div></a>
+</div>
+
+<div class="card modal" id="lesson-modal">
+    <div class="modal-header"><h2 id="modal-title"></h2><button class="modal-close" onclick="document.getElementById('lesson-modal').style.display='none'">✕</button></div>
+    <div class="modal-content" id="modal-content"></div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Letter-stagger приветствия
+(function(){
+    const el = document.getElementById('greeting');
+    if (el) Spring.staggerText(el, el.textContent, 28);
+    // Organic blob celebration если есть ачивки
+    const ach = document.getElementById('new-ach-banner');
+    if (ach) {
+        setTimeout(() => {
+            document.getElementById('level-blob')?.classList.add('lit');
+            Particles.confetti(60);
+        }, 500);
+    }
+})();
+
+function loadLesson(id, title) {
+    document.getElementById('modal-title').textContent = title;
+    const mc = document.getElementById('modal-content');
+    mc.innerHTML = '<div class="spinner">Загружаю урок...</div>';
+    const modal = document.getElementById('lesson-modal');
+    modal.style.display = 'block'; modal.scrollIntoView({behavior:'smooth'});
+    fetch('/api/lesson/'+id+'?stream=1').then(resp=>{
+        const reader=resp.body.getReader(),dec=new TextDecoder();let full='';
+        (function read(){reader.read().then(({done,value})=>{
+            if(done)return;
+            for(const line of dec.decode(value,{stream:true}).split('\n')){
+                if(!line.startsWith('data: '))continue;
+                try{const d=JSON.parse(line.slice(6));
+                    if(d.token){full+=d.token;mc.innerHTML='<div class="modal-content">'+formatMD(full)+'<span class="cursor-blink">|</span></div>';}
+                    if(d.done){mc.innerHTML='<div class="modal-content">'+formatMD(d.full)+'</div><button class="btn btn-accent" onclick="loadQuiz(\''+id+'\',\''+title+'\')">✅ Завершить урок (тест)</button>';}
+                }catch(e){}
+            }read();})})();
+    });
+}
+function loadQuiz(id, title) {
+    const mc = document.getElementById('modal-content');
+    mc.innerHTML = '<div class="spinner">Составляю тест...</div>';
+    fetch('/api/quiz/'+id).then(r=>r.json()).then(d=>{
+        let quiz = typeof d.quiz==='string'?JSON.parse(d.quiz.replace(/```json|```/g,'').trim()):d.quiz;
+        if(!quiz||!quiz.length){mc.innerHTML='<p>Не удалось загрузить тест.</p>';return;}
+        let html='<div><h3>📝 Тест по уроку</h3><p style="color:var(--t2);font-size:13px;margin-bottom:16px">Нужно 4/5 для зачёта.</p>';
+        quiz.forEach((q,i)=>{html+='<div class="q-card"><div class="q-badge">Вопрос '+(i+1)+'</div><div class="q-text">'+q.q+'</div><div class="q-opts">';q.opts.forEach((o,j)=>{html+='<label class="q-opt"><input type="radio" name="qz'+i+'" value="'+j+'" onchange="selOpt(this)"><span>'+o+'</span></label>';});html+='</div></div>';});
+        const cm={};quiz.forEach((q,i)=>{cm[i]=q.ans;});
+        html+='<button class="btn btn-accent btn-lg" onclick="submitQuiz(\''+id+'\',\''+title+'\','+JSON.stringify(cm)+')">📤 Сдать тест</button></div>';
+        mc.innerHTML=html;
+    });
+}
+function selOpt(el){el.closest('.q-opts').querySelectorAll('.q-opt').forEach(e=>e.classList.remove('sel'));el.closest('.q-opt').classList.add('sel');}
+function submitQuiz(id,title,correct){
+    const ans={};for(let i=0;i<Object.keys(correct).length;i++){const s=document.querySelector('input[name="qz'+i+'"]:checked');if(s)ans[i]=parseInt(s.value);}
+    fetch('/api/quiz/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lesson_id:id,title:title,answers:ans,correct:correct})})
+    .then(r=>r.json()).then(d=>{
+        const mc=document.getElementById('modal-content');
+        if(d.passed){
+            AdaptiveTheme.onSuccess();
+            Particles.confetti(80);
+            mc.innerHTML='<div style="text-align:center;padding:30px"><div style="font-size:48px">🎉</div><h3>Сдано! '+d.score+'/'+d.total+'</h3><p style="color:var(--success)">+XP</p><button class="btn btn-accent btn-lg" style="margin-top:14px" onclick="document.getElementById(\'lesson-modal\').style.display=\'none\';location.reload()">👍</button></div>';
+        } else {
+            AdaptiveTheme.onFail();
+            Spring.shake(mc);
+            mc.innerHTML='<div style="text-align:center;padding:30px"><h3>Не сдано: '+d.score+'/'+d.total+'</h3><p style="color:var(--t2)">Нужно 4/5.</p><button class="btn btn-accent" style="margin-top:14px" onclick="loadLesson(\''+id+'\',\''+title+'\')">🔄 Повторить</button></div>';
+        }
+    });
+}
+
+function formatMD(text) {
+    if (!text) return '';
+    return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>')
+        .replace(/### (.*)/g,'<h3>$1</h3>').replace(/## (.*)/g,'<h3>$1</h3>')
+        .replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\n/g,'<br>');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>📖 Словарь</h1>
+<div class="guide">
+    <div class="guide-title">ℹ️ Интервальное повторение + твой актив</div>
+    Слова из вкладки <strong>«Мои слова»</strong> — активные, система показывает их в оптимальный момент. Знаешь → ✅, не знаешь → 🔄.
+    <strong>«Выученные»</strong> — слова со статусом mastered (интервал 21+ день). Это твой пассивный запас — гордись им!
+</div>
+<div style="color:var(--text2);font-size:14px;margin-bottom:12px">{{ user.name }}, здесь твой словарный запас.</div>
+
+<div class="vocab-actions">
+    <button class="btn btn-primary btn-sm" onclick="showAdd()">+ Добавить</button>
+    <button class="btn btn-ghost btn-sm" onclick="genEx()">🤖 ИИ-подборка</button>
+    <span style="flex:1"></span>
+    <button class="btn btn-sm {{ 'btn-primary' if tab == 'active' else 'btn-ghost' }}" onclick="switchTab('active')">📝 Мои слова</button>
+    <button class="btn btn-sm {{ 'btn-accent' if tab == 'mastered' else 'btn-ghost' }}" onclick="switchTab('mastered')">✅ Выученные</button>
+</div>
+
+<div class="vocab-form" id="add-form">
+    <h3 style="margin-bottom:8px" id="form-title">Добавить слово</h3>
+    <div class="form-row">
+        <input type="text" id="eword" placeholder="English word">
+        <input type="text" id="etrans" placeholder="Перевод">
+        <input type="text" id="eex" placeholder="Пример">
+        <input type="hidden" id="eid">
+        <button class="btn btn-primary btn-sm" onclick="saveWord()">💾</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('add-form').style.display='none'">✕</button>
+    </div>
+</div>
+
+<div id="words-active">
+{% set active_words = words|selectattr('status', '!=', 'mastered')|list %}
+{% set mastered_words = words|selectattr('status', '==', 'mastered')|list %}
+
+{% if tab == 'active' %}
+    {% if active_words %}
+    <div class="vocab-table">
+        <div class="vocab-header"><span>Слово</span><span>Перевод</span><span>Пример</span><span>Статус</span><span></span></div>
+        {% for w in active_words %}
+        <div class="vocab-row" id="w-{{ w.id }}">
+            <span class="word-en">{{ w.word }}</span>
+            <span class="word-ru">{{ w.translation }}</span>
+            <span style="font-size:12px;color:var(--text3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ w.example or '—' }}</span>
+            <span class="word-st {{ w.status }}">{{ w.status }}</span>
+            <span style="display:flex;gap:4px">
+                <button class="btn btn-ghost btn-sm" onclick="editWord({{ w.id }},'{{ w.word|e }}','{{ w.translation|e }}','{{ (w.example or '')|e }}')" style="padding:4px 8px;font-size:11px">✏️</button>
+                <button class="btn btn-ghost btn-sm" onclick="delWord({{ w.id }})" style="padding:4px 8px;font-size:11px;color:var(--danger)">🗑</button>
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">Нет активных слов. Добавь через кнопку «+ Добавить» или «🤖 ИИ-подборка».</div>
+    {% endif %}
+{% endif %}
+</div>
+
+<div id="words-mastered" style="{{ 'display:none' if tab != 'mastered' }}">
+{% if mastered_words %}
+    <div class="vocab-table">
+        <div class="vocab-header"><span>Слово</span><span>Перевод</span><span>Пример</span><span>Статус</span><span></span></div>
+        {% for w in mastered_words %}
+        <div class="vocab-row">
+            <span class="word-en">{{ w.word }}</span>
+            <span class="word-ru">{{ w.translation }}</span>
+            <span style="font-size:12px;color:var(--text3)">{{ w.example or '—' }}</span>
+            <span class="word-st mastered">✅ mastered</span>
+            <span>
+                <button class="btn btn-ghost btn-sm" onclick="delWord({{ w.id }})" style="padding:4px 8px;font-size:11px;color:var(--danger)">🗑</button>
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty">Пока нет выученных слов. Продолжай учить — они появятся здесь.</div>
+{% endif %}
+</div>
+
+<div class="card" id="gen-block" style="display:none;margin-top:16px">
+    <div class="card-header"><h3>🤖 ИИ-подборка</h3><button class="modal-close" onclick="document.getElementById('gen-block').style.display='none'">✕</button></div>
+    <div id="gen-content" style="line-height:1.75;margin-top:8px"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentTab = '{{ tab }}';
+
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.vocab-actions .btn').forEach(b => b.classList.remove('btn-primary','btn-accent'));
+    document.getElementById('words-active').style.display = tab === 'active' ? '' : 'none';
+    document.getElementById('words-mastered').style.display = tab === 'mastered' ? '' : 'none';
+    // Обновить URL без перезагрузки
+    history.replaceState(null, '', '/vocab?tab=' + tab);
+}
+
+function showAdd() {
+    document.getElementById('form-title').textContent = 'Добавить слово';
+    document.getElementById('eid').value = '';
+    document.getElementById('eword').value = ''; document.getElementById('etrans').value = ''; document.getElementById('eex').value = '';
+    document.getElementById('add-form').style.display = 'block'; document.getElementById('eword').focus();
+}
+function editWord(id, w, t, e) {
+    document.getElementById('form-title').textContent = 'Редактировать';
+    document.getElementById('eid').value = id;
+    document.getElementById('eword').value = w; document.getElementById('etrans').value = t; document.getElementById('eex').value = e;
+    document.getElementById('add-form').style.display = 'block'; document.getElementById('eword').focus();
+}
+function saveWord() {
+    const id = document.getElementById('eid').value;
+    const w = document.getElementById('eword').value.trim();
+    const t = document.getElementById('etrans').value.trim();
+    const e = document.getElementById('eex').value.trim();
+    if (!w || !t) { alert('Слово и перевод обязательны!'); return; }
+    const url = id ? '/api/vocab/update' : '/api/vocab/add';
+    const body = id ? {id: parseInt(id), word: w, translation: t, example: e} : {word: w, translation: t, example: e};
+    fetch(url, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(()=>location.reload());
+}
+function delWord(id) {
+    if (!confirm('Удалить слово?')) return;
+    fetch('/api/vocab/delete', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})}).then(()=>location.reload());
+}
+function genEx() {
+    document.getElementById('gen-block').style.display = 'block';
+    document.getElementById('gen-content').innerHTML = '<div class="spinner">Генерирую...</div>';
+    fetch('/api/vocab/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic:'general'})})
+        .then(r=>r.json()).then(d=>{ document.getElementById('gen-content').innerHTML = formatMD(d.exercise); });
+}
+</script>
+{% endblock %}

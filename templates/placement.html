@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="placement-wrap">
+    <div class="placement-header">
+        <h1>🎯 Тест на определение уровня</h1>
+        <p>25 вопросов от алфавита до продвинутой грамматики. Определит твой точный уровень A0–C2.</p>
+        <div class="level-line">
+            <span>A0</span><span class="arr">→</span><span>A1</span><span class="arr">→</span>
+            <span>A2</span><span class="arr">→</span><span>B1</span><span class="arr">→</span>
+            <span>B2</span><span class="arr">→</span><span>C1</span><span class="arr">→</span><span>C2</span>
+        </div>
+    </div>
+
+    <div id="test-area">
+        <div class="progress"><div class="progress-fill" id="progress-fill"></div></div>
+        <span class="progress-text" id="progress-text">0/25</span>
+        <div id="question-container"></div>
+        <div class="test-nav">
+            <button class="btn btn-ghost" id="prev-btn" disabled onclick="prevQuestion()">← Назад</button>
+            <button class="btn btn-primary" id="next-btn" onclick="nextQuestion()">Далее →</button>
+        </div>
+    </div>
+
+    <div id="result-area" style="display:none">
+        <div class="result-card">
+            <div class="result-score" id="result-score"></div>
+            <div class="result-level" id="result-level"></div>
+            <div class="result-analysis" id="result-analysis"></div>
+            <a href="/" class="btn btn-accent btn-large">🏠 На главную</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const questions = {{ questions | tojson }};
+let currentQ = 0;
+let answers = {};
+
+function renderQuestion() {
+    const q = questions[currentQ];
+    const pct = ((currentQ) / questions.length) * 100;
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('progress-text').textContent = currentQ + '/' + questions.length;
+
+    let html = '<div class="q-card">';
+    html += '<div class="q-badge">' + q.level + ' · ' + q.topic + '</div>';
+    html += '<div class="q-text">' + (currentQ + 1) + '. ' + q.q + '</div>';
+    html += '<div class="q-opts">';
+    q.opts.forEach((opt, i) => {
+        const checked = answers[q.id] === i ? ' sel' : '';
+        html += '<label class="q-opt' + checked + '">';
+        html += '<input type="radio" name="q' + q.id + '" value="' + i + '" ' + (checked?'checked':'') + ' onchange="selectAnswer(' + q.id + ', ' + i + ')">';
+        html += '<span>' + opt + '</span></label>';
+    });
+    html += '</div></div>';
+    document.getElementById('question-container').innerHTML = html;
+    document.getElementById('prev-btn').disabled = currentQ === 0;
+    const nb = document.getElementById('next-btn');
+    if (currentQ >= questions.length - 1) {
+        nb.textContent = '✅ Завершить тест';
+        nb.onclick = submitTest;
+    } else {
+        nb.textContent = 'Далее →';
+        nb.onclick = nextQuestion;
+    }
+}
+
+function selectAnswer(qid, v) {
+    answers[qid] = v;
+    document.querySelectorAll('.q-opt').forEach(e => e.classList.remove('sel'));
+    const inp = document.querySelector('input[name="q' + qid + '"][value="' + v + '"]');
+    if (inp) inp.parentElement.classList.add('sel');
+}
+
+function nextQuestion() {
+    if (answers[questions[currentQ].id] === undefined) { alert('Выбери ответ!'); return; }
+    currentQ++; renderQuestion();
+}
+function prevQuestion() { currentQ--; renderQuestion(); }
+
+function submitTest() {
+    if (answers[questions[currentQ].id] === undefined) { alert('Выбери ответ!'); return; }
+    document.getElementById('test-area').style.display = 'none';
+    document.getElementById('result-area').style.display = 'block';
+    document.getElementById('result-score').innerHTML = '<div class="spinner"></div><p>Проверяем...</p>';
+
+    fetch('/api/placement/submit', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({answers: answers})
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('result-score').innerHTML =
+            '<div class="big-score">' + data.score + '/' + data.total + '</div>' +
+            '<div style="color:var(--text2);margin-bottom:16px">' + Math.round(data.score/data.total*100) + '% правильных</div>';
+        document.getElementById('result-level').innerHTML =
+            '<h2 style="margin-bottom:12px">Твой уровень:</h2>' +
+            '<span class="result-level-tag">' + data.level + ' — ' + data.level_name + '</span>';
+        document.getElementById('result-analysis').innerHTML = formatMD(data.analysis);
+    });
+}
+
+renderQuestion();
+</script>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>📈 Тест на повышение уровня</h1>
+<div class="guide">
+    <div class="guide-title">ℹ️ Как перейти на следующий уровень</div>
+    Выбери целевой уровень → пройди тест из 15 вопросов. Нужно 70%+ правильных ответов.
+    Сдал → уровень повышен, +200 XP. Не сдал → пройди ещё уроки и возвращайся.
+    <strong>Совет:</strong> сдавай тест только когда уверенно прошёл все уроки текущего уровня.
+</div>
+<p style="color:var(--text2);font-size:14px;margin-bottom:20px">Сдай экзамен и перейди на следующий уровень.</p>
+
+<div class="lvl-tabs" style="margin-bottom:24px">
+    {% for lv in level_order %}
+    <button class="lvl-tab {% if lv == current_level %}active{% endif %}" onclick="startLevelTest('{{ lv }}')">
+        {{ lv }}<br><small>{{ level_names[lv] }}</small>
+    </button>
+    {% endfor %}
+</div>
+
+<div class="card" id="test-area" style="display:none">
+    <div class="modal-header"><h2 id="test-title"></h2><span id="test-score" style="font-size:13px;color:var(--text2)"></span></div>
+    <div id="test-content"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let testState = {};
+
+function startLevelTest(level) {
+    document.getElementById('test-area').style.display = 'block';
+    document.getElementById('test-title').textContent = 'Тест на уровень '+level;
+    document.getElementById('test-content').innerHTML = '<div class="spinner">Генерирую тест...</div>';
+    document.getElementById('test-area').scrollIntoView({behavior:'smooth'});
+
+    fetch('/api/levelup/test/'+level).then(r=>r.json()).then(d=>{
+        let quiz = typeof d.quiz==='string' ? JSON.parse(d.quiz.replace(/```json|```/g,'').trim()) : d.quiz;
+        if (!quiz || !quiz.length) { document.getElementById('test-content').innerHTML = '<p>Не удалось сгенерировать тест.</p>'; return; }
+        testState = {level: d.level, questions: quiz, correctMap: {}};
+        quiz.forEach((q,i) => { testState.correctMap[i] = q.ans; });
+        document.getElementById('test-score').textContent = quiz.length+' вопросов';
+
+        let html = '';
+        quiz.forEach((q, i) => {
+            html += '<div class="q-card" style="margin-bottom:10px;padding:16px"><div class="q-badge">Вопрос '+(i+1)+'</div><div class="q-text" style="font-size:15px">'+q.q+'</div><div class="q-opts">';
+            q.opts.forEach((o, j) => {
+                html += '<label class="q-opt"><input type="radio" name="t'+i+'" value="'+j+'" onchange="selOpt(this)"><span>'+o+'</span></label>';
+            });
+            html += '</div></div>';
+        });
+        html += '<button class="btn btn-accent btn-large" onclick="submitLevelTest()">📤 Сдать экзамен</button>';
+        document.getElementById('test-content').innerHTML = html;
+    });
+}
+
+function selOpt(el) {
+    el.closest('.q-opts').querySelectorAll('.q-opt').forEach(e=>e.classList.remove('sel'));
+    el.closest('.q-opt').classList.add('sel');
+}
+
+function submitLevelTest() {
+    const answers = {};
+    for (let i = 0; i < testState.questions.length; i++) {
+        const sel = document.querySelector('input[name="t'+i+'"]:checked');
+        if (sel) answers[i] = parseInt(sel.value);
+    }
+    const total = testState.questions.length;
+    if (Object.keys(answers).length < total) { alert('Ответь на все вопросы!'); return; }
+
+    fetch('/api/levelup/submit', {method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({level:testState.level, answers:answers, correct:testState.correctMap})})
+    .then(r=>r.json()).then(d=>{
+        let html = '<div style="text-align:center;padding:30px">';
+        html += '<div style="font-size:52px;font-weight:800;color:var(--primary2)">'+d.pct+'%</div>';
+        html += '<div style="font-size:18px;color:var(--text2);margin-bottom:8px">'+d.score+'/'+d.total+' правильных</div>';
+        if (d.passed) {
+            html += '<div style="font-size:60px;margin:12px 0">🎉</div>';
+            html += '<h2 style="color:var(--accent)">Экзамен сдан!</h2>';
+            html += '<p style="font-size:18px;margin:8px 0">Твой новый уровень: <strong style="color:var(--primary2)">'+d.level+'</strong></p>';
+            html += '<p style="color:var(--accent);font-weight:600">+200 XP</p>';
+            html += '<button class="btn btn-accent btn-large" style="margin-top:16px" onclick="location.reload()">🚀 Продолжить</button>';
+        } else {
+            html += '<div style="font-size:60px;margin:12px 0">📚</div>';
+            html += '<h2>Нужно больше практики</h2>';
+            html += '<p style="color:var(--text2)">Для перехода на '+testState.level+' нужно 70%. Пройди ещё уроки и возвращайся.</p>';
+            html += '<button class="btn btn-accent" style="margin-top:16px" onclick="startLevelTest(\''+testState.level+'\')">🔄 Попробовать снова</button>';
+        }
+        html += '</div>';
+        document.getElementById('test-content').innerHTML = html;
+    });
+}
+</script>
+{% endblock %}

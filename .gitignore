@@ -1,0 +1,9 @@
+apikey.txt
+english_learn.db
+SaveDRG/
+dist/
+build/
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store

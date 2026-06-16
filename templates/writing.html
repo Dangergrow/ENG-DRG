@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="tool-page">
+    <h1>✍️ Проверка письма</h1>
+    <div class="guide">
+        <div class="guide-title">ℹ️ Как проверять тексты</div>
+        Выбери тип текста → напиши на английском (минимум 20 слов) → нажми «Проверить».
+        ИИ исправит ошибки, поставит оценку по грамматике/лексике/структуре и даст советы.
+    </div>
+    <p class="subtitle">Напиши текст — ИИ проверит грамматику, лексику и структуру.</p>
+
+    <div class="card">
+        <div class="tool-row">
+            <select id="task-select" class="mode-select">
+                <option value="свободная тема">Свободная тема</option>
+                <option value="письмо другу">Письмо другу</option>
+                <option value="деловое письмо">Деловое письмо</option>
+                <option value="эссе">Эссе / сочинение</option>
+                <option value="описание картинки">Описание картинки</option>
+                <option value="рассказ о себе">Рассказ о себе</option>
+            </select>
+        </div>
+        <div class="tool-row">
+            <textarea id="input-text" placeholder="Напиши текст на английском... (минимум 20 слов для хорошего анализа)" style="min-height:150px"></textarea>
+        </div>
+        <button class="btn btn-primary btn-large" onclick="checkWriting()">✍️ Проверить</button>
+        <div class="tool-result" id="result"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function checkWriting() {
+    const text = document.getElementById('input-text').value.trim();
+    if (!text) { alert('Напиши текст!'); return; }
+    const task = document.getElementById('task-select').value;
+    const res = document.getElementById('result');
+    res.style.display = 'block';
+    res.innerHTML = '<div class="spinner">Проверяю...</div>';
+    fetch('/api/writing', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({text: text, task: task})
+    })
+    .then(r => r.json())
+    .then(d => { res.innerHTML = formatMD(d.result); });
+}
+</script>
+{% endblock %}

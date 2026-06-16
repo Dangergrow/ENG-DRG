@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinguaMate — Умный английский</title>
+    <link rel="stylesheet" href="/static/css/design-system.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="logo">Lingua<span>Mate</span></div>
+
+        <div class="nav-section">Обучение</div>
+        <a href="/" class="nav-item {{ 'active' if request.path == '/' }}">🏠 Главная</a>
+        <a href="/lessons" class="nav-item {{ 'active' if request.path == '/lessons' }}">📚 Уроки</a>
+        <a href="/chat" class="nav-item {{ 'active' if request.path == '/chat' }}">💬 Разговорный клуб</a>
+        <a href="/translate" class="nav-item {{ 'active' if request.path == '/translate' }}">🔤 Переводчик</a>
+        <a href="/pronounce" class="nav-item {{ 'active' if request.path == '/pronounce' }}">🗣 Произношение</a>
+        <a href="/writing" class="nav-item {{ 'active' if request.path == '/writing' }}">✍️ Письмо</a>
+
+        <div class="nav-section">Инструменты</div>
+        <a href="/vocab" class="nav-item {{ 'active' if request.path == '/vocab' }}">📖 Словарь</a>
+        <a href="/games" class="nav-item {{ 'active' if request.path == '/games' }}">🎮 Игры</a>
+        <a href="/stats" class="nav-item {{ 'active' if request.path == '/stats' }}">📊 Статистика</a>
+        <a href="/levelup" class="nav-item {{ 'active' if request.path == '/levelup' }} highlight">📈 Тест уровня</a>
+        <a href="/about" class="nav-item {{ 'active' if request.path == '/about' }}">ℹ️ О проекте</a>
+
+        {% if not has_level %}
+        <a href="/placement" class="nav-item" style="background:var(--success);color:#000;font-weight:700;margin-top:6px">🎯 Пройти тест</a>
+        {% endif %}
+
+        <div class="sidebar-footer">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer" onclick="toggleProfile()">
+                <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;font-weight:700;flex-shrink:0">{{ user.name[0]|upper }}</div>
+                <div style="line-height:1.2;flex:1">
+                    <div style="font-weight:600;font-size:12px">{{ user.name }}</div>
+                    <div style="font-size:10px;color:var(--accent-2)">{{ user.level or 'Новый' }} · {{ user.xp }} XP</div>
+                </div>
+            </div>
+            <button onclick="logout()" style="width:100%;background:transparent;border:1px solid var(--danger);color:var(--danger);padding:7px 0;border-radius:var(--radius);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:all var(--ts)" onmouseover="this.style.background='rgba(255,77,106,0.1)'" onmouseout="this.style.background='transparent'">Выйти</button>
+        </div>
+    </nav>
+
+    {% if fullpage_mode is defined and fullpage_mode %}
+    <main class="content">{{ self.content() }}</main>
+    {% else %}
+    <main class="content">
+        <div class="content-inner">{{ self.content() }}</div>
+    </main>
+    {% endif %}
+
+    <!-- Profile Popup -->
+    <div class="profile-overlay" id="profile-modal" style="display:none" onclick="if(event.target===this)closeProfile()">
+        <div class="profile-panel"><div id="profile-content"></div></div>
+    </div>
+
+    <script src="/static/js/spring.js"></script>
+    <script src="/static/js/particles.js"></script>
+    <script src="/static/js/adaptive-theme.js"></script>
+    <script src="/static/js/animated-icons.js"></script>
+    <script src="/static/js/main.js"></script>
+    <script>
+    AdaptiveTheme.loadSaved();
+    AdaptiveTheme.init();
+
+    async function switchUser(uid) {
+        await fetch('/api/switch_user', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:uid})});
+        location.reload();
+    }
+    async function logout() { await fetch('/api/logout', {method:'POST'}); window.location.href = '/login'; }
+
+    async function toggleProfile() {
+        const m = document.getElementById('profile-modal');
+        if (m.style.display === 'flex') { closeProfile(); return; }
+        m.style.display = 'flex';
+        document.getElementById('profile-content').innerHTML = '<div class="spinner">Загружаю...</div>';
+        const r = await fetch('/api/profile/history');
+        const d = await r.json();
+        const names = {'streak_3':'3 дня','streak_7':'7 дней','streak_14':'14 дней','streak_30':'30 дней','words_10':'10 слов','words_50':'50 слов','words_100':'100 слов','mastered_10':'10 выучено','mastered_30':'30 выучено','mastered_100':'100 выучено','lessons_1':'1 урок','lessons_5':'5 уроков','lessons_10':'10 уроков','lessons_25':'25 уроков','chats_10':'10 сообщений','chats_50':'50 сообщений','chats_100':'100 сообщений','xp_100':'100 XP','xp_500':'500 XP','xp_2000':'2000 XP','level_b1':'Уровень B1+','level_c1':'Уровень C1+'};
+        let h = '<div style="display:flex;align-items:center;gap:14px;margin-bottom:18px"><div style="width:48px;height:48px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;font-weight:700">{{ user.name[0]|upper }}</div><div><h2 style="font-size:18px">'+d.name+'</h2><span style="display:inline-block;background:color-mix(in oklch, var(--accent) 15%, transparent);color:var(--accent-2);padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600">'+(d.level||'Новый')+'</span></div></div>';
+        h += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">'+['XP','Streak','Слов','Выучено'].map((l,i)=>'<div style="background:var(--s2);border-radius:var(--radius-sm);padding:12px 8px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--accent-2)">'+[d.xp,d.streak,d.words,d.mastered][i]+'</div><div style="font-size:10px;color:var(--t3)">'+l+'</div></div>').join('')+'</div>';
+        if (d.achievements.length) { h += '<h4 style="margin:14px 0 6px;color:var(--success)">🏆 Достижения ('+d.achievements.length+')</h4><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:8px">'; d.achievements.forEach(a => { h += '<div style="background:color-mix(in oklch, var(--success) 6%, transparent);border:1px solid color-mix(in oklch, var(--success) 25%, transparent);border-radius:var(--radius-sm);padding:7px 10px;font-size:11px;color:var(--success)">'+(names[a.achievement_id]||a.achievement_id)+'</div>'; }); h += '</div>'; }
+        if (d.lessons.length) { h += '<h4 style="margin:10px 0 4px;color:var(--accent-2)">📚 Последние уроки</h4>'; d.lessons.forEach(l => { h += '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--s3);font-size:12px;color:var(--t2)"><span>'+l.lesson_title+'</span><span>'+l.score+'/'+l.max_score+'</span></div>'; }); }
+        h += '<div style="display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--s3)">';
+        h += '<button class="btn btn-ghost btn-sm" onclick="resetProfile()" style="color:var(--warn);border-color:var(--warn)">🔄 Сбросить всё</button>';
+        h += '<button class="btn btn-ghost btn-sm" onclick="deleteProfile()" style="color:var(--danger);border-color:var(--danger)">🗑 Удалить профиль</button>';
+        h += '</div>';
+        document.getElementById('profile-content').innerHTML = h;
+    }
+    function closeProfile() { document.getElementById('profile-modal').style.display = 'none'; }
+
+    async function resetProfile() {
+        if (!confirm('Сбросить ВСЕ данные? Уровень, XP, словарь, история чата — всё будет удалено. Это необратимо.')) return;
+        await fetch('/api/chat/clear', {method:'POST'});
+        location.reload();
+    }
+    async function deleteProfile() {
+        if (!confirm('Удалить профиль полностью? Все данные будут потеряны навсегда.')) return;
+        await fetch('/api/delete_account', {method:'POST'});
+        window.location.href = '/login';
+    }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

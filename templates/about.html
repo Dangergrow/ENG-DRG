@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="text-align:center;padding:60px 20px 40px">
+    <div style="font-size:52px;font-weight:800;background:linear-gradient(135deg,var(--primary2),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px">LinguaMate</div>
+    <p style="color:var(--text2);font-size:16px;margin-bottom:32px">Умный ИИ-учитель английского языка от A0 до C2</p>
+
+    <div class="card" style="max-width:500px;margin:0 auto 24px">
+        <h3 style="margin-bottom:16px">ℹ️ О проекте</h3>
+        <p style="color:var(--text2);line-height:1.8;font-size:14px;text-align:left">
+            LinguaMate — это персональный ИИ-репетитор английского языка. Система использует
+            искусственный интеллект (OpenRouter) для генерации уроков, проверки грамматики,
+            разговорной практики и тестирования.
+        </p>
+        <p style="color:var(--text2);line-height:1.8;font-size:14px;text-align:left;margin-top:12px">
+            <strong style="color:var(--text)">Возможности:</strong><br>
+            • 70+ уроков от A0 до C2<br>
+            • Разговорный клуб с голосовым вводом и озвучкой<br>
+            • Тестирование и сертификация уровней<br>
+            • Обучающие игры (Виселица, Пары слов, Блиц-квиз, Анаграммы)<br>
+            • Словарь с интервальным повторением<br>
+            • Система достижений и XP<br>
+            • Мульти-профили для всей семьи
+        </p>
+        <p style="color:var(--text2);line-height:1.8;font-size:14px;text-align:left;margin-top:12px">
+            <strong style="color:var(--text)">Технологии:</strong><br>
+            • ИИ: OpenRouter (бесплатные модели)<br>
+            • Озвучка: Microsoft Edge TTS (нейросетевые голоса)<br>
+            • Распознавание речи: Web Speech API<br>
+            • Бэкенд: Python + Flask<br>
+        </p>
+    </div>
+
+    <div class="card" style="max-width:500px;margin:0 auto;background:linear-gradient(135deg,var(--surface),rgba(139,108,255,0.05));border-color:rgba(139,108,255,0.2)">
+        <div style="font-size:14px;color:var(--text2);margin-bottom:6px">Автор</div>
+        <div style="font-size:28px;font-weight:800;background:linear-gradient(135deg,var(--primary2),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Dangergrow</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px">2026</div>
+    </div>
+</div>
+{% endblock %}

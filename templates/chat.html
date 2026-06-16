@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="chat-wrap">
+        <div class="chat-top">
+            <h1>💬 Разговорный клуб</h1>
+            <p>Практикуй английский голосом или текстом. ИИ отвечает потоково и озвучивает ответы.</p>
+            <div class="chat-controls">
+                <select class="mode-select" id="chat-mode">
+                    <option value="free">🗣 Свободный</option>
+                    <option value="topic">📌 Тема</option>
+                    <option value="grammar">✍️ Грамматика</option>
+                    <option value="roleplay">🎭 Роль</option>
+                </select>
+                <select class="mode-select" id="chat-topic">
+                    <option value="everyday life">Повседневная жизнь</option>
+                    <option value="travel">Путешествия</option>
+                    <option value="work and career">Работа</option>
+                    <option value="hobbies">Хобби</option>
+                    <option value="food">Еда</option>
+                    <option value="technology">Технологии</option>
+                </select>
+                <select class="mode-select" id="chat-scenario" style="display:none">
+                    <option value="ordering food at a restaurant">Ресторан</option>
+                    <option value="checking into a hotel">Отель</option>
+                    <option value="job interview">Собеседование</option>
+                    <option value="at the doctor">У врача</option>
+                    <option value="shopping for clothes">Магазин</option>
+                    <option value="meeting new people">Знакомство</option>
+                </select>
+                <select class="voice-select" id="voice-select" title="Голос озвучки">
+                    <option value="en-US-AriaNeural">🇬🇧 Жен.</option>
+                    <option value="en-US-GuyNeural">🇬🇧 Муж.</option>
+                    <option value="en-GB-SoniaNeural">🇬🇧 UK жен.</option>
+                    <option value="en-GB-RyanNeural">🇬🇧 UK муж.</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" onclick="clearChat()">🗑</button>
+                <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--t2);cursor:pointer">
+                    <input type="checkbox" id="stream-toggle" checked>⚡стрим
+                </label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--t2);cursor:pointer">
+                    <input type="checkbox" id="tts-toggle" checked>🔊звук
+                </label>
+            </div>
+        </div>
+
+        <div class="msgs" id="chat-msgs">
+            <div class="msg assistant">
+                <div class="msg-avatar">🤖</div>
+                <div class="msg-body">
+                    <strong>Привет, {{ user.name }}!</strong> Уровень: <strong>{{ user.level or 'Не определён' }}</strong>.<br>
+                    🎤 — голос | ⚡ — стриминг | 🔊 — озвучка
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-input-area">
+            <div class="voice-indicator" id="voice-ind"><div class="voice-pulse"></div>Говори...</div>
+            <div class="input-row">
+                <button class="voice-btn" id="voice-btn" onclick="toggleVoice()">🎤</button>
+                <textarea id="chat-input" placeholder="Пиши или говори на английском..." rows="2"></textarea>
+                <button class="send-btn" id="send-btn" onclick="sendMsg()">▶</button>
+            </div>
+        </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let busy = false, listening = false;
+const msgs = document.getElementById('chat-msgs');
+const input = document.getElementById('chat-input');
+const modeSel = document.getElementById('chat-mode');
+const topicSel = document.getElementById('chat-topic');
+const scenSel = document.getElementById('chat-scenario');
+const streamToggle = document.getElementById('stream-toggle');
+const ttsToggle = document.getElementById('tts-toggle');
+const voiceSel = document.getElementById('voice-select');
+
+function updateModeUI(){
+    topicSel.style.display = modeSel.value === 'topic' ? '' : 'none';
+    scenSel.style.display = modeSel.value === 'roleplay' ? '' : 'none';
+}
+modeSel.addEventListener('change', updateModeUI);
+updateModeUI();
+
+input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+});
+
+// Load history
+fetch('/api/chat/history').then(r=>r.json()).then(d=>{
+    if (d.history && d.history.length) {
+        msgs.innerHTML = '';
+        d.history.forEach(h => addMsg(h.role, h.content, true));
+    }
+});
+
+function sendMsg() {
+    const text = input.value.trim();
+    if (!text || busy) return;
+    addMsg('user', text); input.value = ''; input.focus();
+    busy = true; document.getElementById('send-btn').disabled = true;
+    streamToggle.checked ? sendStream(text) : sendNormal(text);
+}
+function sendNormal(text) {
+    addTyping();
+    fetch('/api/chat', {method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({message:text, mode:modeSel.value, topic:topicSel.value, scenario:scenSel.value, stream:false})})
+    .then(r=>r.json()).then(d=>{ rmTyping(); addMsg('assistant', d.reply); reset(); })
+    .catch(()=>{ rmTyping(); addMsg('assistant','Ошибка.'); reset(); });
+}
+function sendStream(text) {
+    const msgEl = document.createElement('div'); msgEl.className = 'msg assistant';
+    msgEl.innerHTML = '<div class="msg-avatar">🤖</div><div class="msg-body"><span class="cursor-blink">|</span></div>';
+    msgs.appendChild(msgEl); const body = msgEl.querySelector('.msg-body'); let full = '';
+    fetch('/api/chat', {method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({message:text, mode:modeSel.value, topic:topicSel.value, scenario:scenSel.value, stream:true})})
+    .then(resp => {
+        const reader = resp.body.getReader(), dec = new TextDecoder();
+        (function read(){reader.read().then(({done,value})=>{
+            if(done){reset();return}
+            for(const line of dec.decode(value,{stream:true}).split('\n')){
+                if(!line.startsWith('data: '))continue;
+                try{const d=JSON.parse(line.slice(6));
+                    if(d.token){full+=d.token;body.innerHTML=formatMD(full)+'<span class="cursor-blink">|</span>';msgs.scrollTop=msgs.scrollHeight;}
+                    if(d.done){body.innerHTML=formatMD(d.full);if(ttsToggle.checked)playTTS(d.full);reset();}
+                }catch(e){}
+            }
+            if(!document.getElementById('send-btn').disabled)return;
+            read();
+        })()});
+    }).catch(()=>{addMsg('assistant','Ошибка.');reset();});
+}
+function reset(){busy=false;document.getElementById('send-btn').disabled=false;}
+function addMsg(role, text, skipTTS){
+    const d=document.createElement('div');d.className='msg '+role;
+    d.innerHTML='<div class="msg-avatar">'+(role==='user'?'👤':'🤖')+'</div><div class="msg-body">'+formatMD(text)+'</div>';
+    msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;
+    if(!skipTTS&&role==='assistant'&&ttsToggle.checked&&!streamToggle.checked)playTTS(text);
+}
+function addTyping(){const d=document.createElement('div');d.className='msg assistant';d.id='typing';d.innerHTML='<div class="msg-avatar">🤖</div><div class="msg-body"><div class="typing"><span></span><span></span><span></span></div></div>';msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;}
+function rmTyping(){const e=document.getElementById('typing');if(e)e.remove();}
+function clearChat(){if(!confirm('Очистить?'))return;fetch('/api/chat/clear',{method:'POST'}).then(()=>{msgs.innerHTML='<div class="msg assistant"><div class="msg-avatar">🤖</div><div class="msg-body"><strong>Чат очищен.</strong></div></div>';});}
+
+function toggleVoice(){listening?stopVoice():startVoice();}
+function startVoice(){
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR){alert('Нужен Chrome/Edge.');return;}
+    const rec=new SR();rec.lang='en-US';
+    rec.onstart=()=>{listening=true;document.getElementById('voice-btn').textContent='🔴';document.getElementById('voice-btn').classList.add('rec');document.getElementById('voice-ind').style.display='flex';};
+    rec.onresult=e=>{input.value=e.results[0][0].transcript;stopVoice();setTimeout(sendMsg,200);};
+    rec.onerror=e=>{stopVoice();if(e.error==='not-allowed')alert('Разреши микрофон.');};
+    rec.onend=()=>stopVoice();window.__rec=rec;rec.start();
+}
+function stopVoice(){listening=false;document.getElementById('voice-btn').textContent='🎤';document.getElementById('voice-btn').classList.remove('rec');document.getElementById('voice-ind').style.display='none';try{window.__rec&&window.__rec.stop();}catch(e){}}
+
+let ttsVoices=[];
+speechSynthesis.onvoiceschanged=()=>{ttsVoices=speechSynthesis.getVoices();};
+setTimeout(()=>{ttsVoices=speechSynthesis.getVoices();},500);
+
+function playTTS(text){
+    const clean=text.replace(/\*\*(.*?)\*\*/g,'$1').replace(/[#*`]/g,'').substring(0,400);
+    const cyrillic=(clean.match(/[а-яё]/gi)||[]).length;
+    const isRu=cyrillic>clean.length*0.3;
+    const u=new SpeechSynthesisUtterance(clean);u.rate=0.92;u.pitch=1.0;
+    if(isRu){u.lang='ru-RU';const rv=ttsVoices.find(v=>v.lang.startsWith('ru'));if(rv)u.voice=rv;}
+    else{
+        const sv=voiceSel.value;u.lang=sv.startsWith('en-GB')?'en-GB':'en-US';
+        let v=ttsVoices.find(x=>x.name===sv);
+        if(!v)v=ttsVoices.find(x=>x.lang.startsWith(u.lang)&&x.name.includes('Female'))||ttsVoices.find(x=>x.lang.startsWith(u.lang));
+        if(v)u.voice=v;
+    }
+    speechSynthesis.cancel();speechSynthesis.speak(u);
+}
+function formatMD(text){if(!text)return'';return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/### (.*)/g,'<h3>$1</h3>').replace(/## (.*)/g,'<h3>$1</h3>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\n/g,'<br>');}
+</script>
+{% endblock %}

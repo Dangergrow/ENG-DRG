@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="tool-page">
+    <h1>🗣 Произношение</h1>
+    <div class="guide">
+        <div class="guide-title">ℹ️ Как улучшить произношение</div>
+        Введи слово или фразу → нажми «Разобрать» — ИИ даст транскрипцию, разбор по слогам и объяснит сложные звуки.
+        Нажми «Озвучить» чтобы услышать живое произношение носителя. <strong>Повторяй вслух!</strong>
+    </div>
+    <p class="subtitle">Транскрипция, разбор по слогам, сложные звуки и живая озвучка.</p>
+
+    <div class="card">
+        <div class="tool-row">
+            <textarea id="input-text" placeholder="Введи слово или фразу на английском..."></textarea>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-large" onclick="analyze()">🔍 Разобрать</button>
+            <button class="btn btn-accent btn-large" onclick="playWord()">🔊 Озвучить</button>
+        </div>
+        <div class="tool-result" id="result"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function analyze() {
+    const text = document.getElementById('input-text').value.trim();
+    if (!text) { alert('Введи слово или фразу!'); return; }
+    const res = document.getElementById('result');
+    res.style.display = 'block';
+    res.innerHTML = '<div class="spinner">Анализирую произношение...</div>';
+    fetch('/api/pronounce', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({text: text})
+    })
+    .then(r => r.json())
+    .then(d => { res.innerHTML = formatMD(d.result); });
+}
+
+function playWord() {
+    const text = document.getElementById('input-text').value.trim();
+    if (!text) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US'; u.rate = 0.85;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+}
+</script>
+{% endblock %}

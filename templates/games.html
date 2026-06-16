@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>🎮 Игры на английском</h1>
+<div class="guide">
+    <div class="guide-title">ℹ️ 7 игр для прокачки английского</div>
+    Закрепляй лексику и грамматику через игру. XP зачисляется в профиль. Сложность растёт с каждым раундом.
+</div>
+
+<div class="game-cards">
+    <div class="game-card" onclick="startGame('hangman')"><div class="gc-icon">💀</div><div class="gc-title">Виселица</div><div class="gc-sub">Угадай слово по буквам</div><div class="gc-diff">Лексика</div></div>
+    <div class="game-card" onclick="startGame('wordmatch')"><div class="gc-icon">🔗</div><div class="gc-title">Пары слов</div><div class="gc-sub">Сопоставь слово и перевод</div><div class="gc-diff">Лексика</div></div>
+    <div class="game-card" onclick="startGame('speedquiz')"><div class="gc-icon">⚡</div><div class="gc-title">Блиц-квиз</div><div class="gc-sub">60 секунд на ответы</div><div class="gc-diff">Всё</div></div>
+    <div class="game-card" onclick="startGame('scramble')"><div class="gc-icon">🔀</div><div class="gc-title">Анаграммы</div><div class="gc-sub">Расшифруй слово</div><div class="gc-diff">Лексика</div></div>
+    <div class="game-card" onclick="startGame('memory')"><div class="gc-icon">🧠</div><div class="gc-title">Memory</div><div class="gc-sub">Найди пару: слово — перевод</div><div class="gc-diff">Память</div></div>
+    <div class="game-card" onclick="startGame('typing')"><div class="gc-icon">⌨️</div><div class="gc-title">Скоростной набор</div><div class="gc-sub">Напечатай слово за 3 сек</div><div class="gc-diff">Скорость</div></div>
+    <div class="game-card" onclick="startGame('gramdef')"><div class="gc-icon">🛡️</div><div class="gc-title">Грам. защита</div><div class="gc-sub">Выбери правильный вариант</div><div class="gc-diff">Грамматика</div></div>
+    <div class="game-card" onclick="startGame('wordbuild')"><div class="gc-icon">🧱</div><div class="gc-title">Собери слово</div><div class="gc-sub">Впиши недостающие буквы</div><div class="gc-diff">Лексика</div></div>
+    <div class="game-card" onclick="startGame('wordrain')"><div class="gc-icon">🌧️</div><div class="gc-title">Word Rain</div><div class="gc-sub">Напечатай перевод падающих слов</div><div class="gc-diff">Скорость</div></div>
+    <div class="game-card" onclick="startGame('sentbuild')"><div class="gc-icon">🧩</div><div class="gc-title">Собери предложение</div><div class="gc-sub">Расставь слова по порядку</div><div class="gc-diff">Грамматика</div></div>
+    <div class="game-card" onclick="startGame('dictation')"><div class="gc-icon">👂</div><div class="gc-title">Диктант</div><div class="gc-sub">Прослушай и напиши слово</div><div class="gc-diff">Аудирование</div></div>
+    <div class="game-card" onclick="startGame('errhunt')"><div class="gc-icon">🔍</div><div class="gc-title">Охота на ошибки</div><div class="gc-sub">Найди и исправь ошибку</div><div class="gc-diff">Грамматика</div></div>
+</div>
+
+<div class="card" id="game-area" style="display:none">
+    <div class="modal-header"><h2 id="game-title"></h2><button class="modal-close" onclick="document.getElementById('game-area').style.display='none'">✕</button></div>
+    <div id="game-content" style="min-height:320px;display:flex;align-items:center;justify-content:center;flex-direction:column"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let gameState={round:0};
+function addXP(amount){fetch('/api/game/xp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount})});}
+function startGame(game){
+    document.getElementById('game-area').style.display='block';
+    document.getElementById('game-area').scrollIntoView({behavior:'smooth'});
+    gameState.round++;gameState.game=game;
+    const fns={hangman:initHangman,wordmatch:initWordMatch,speedquiz:initSpeedQuiz,scramble:initScramble,memory:initMemory,typing:initTyping,gramdef:initGramDef,wordbuild:initWordBuild,wordrain:initWordRain,sentbuild:initSentBuild,dictation:initDictation,errhunt:initErrHunt};
+    if(fns[game])fns[game]();
+}
+function renderGame(content){
+    document.getElementById('game-content').innerHTML=content;
+}
+
+// === EXISTING GAMES (compressed) ===
+function initHangman(){document.getElementById('game-title').textContent='💀 Виселица (раунд '+gameState.round+')';renderGame('<div class="spinner">Загружаю...</div>');fetch('/api/game/hangman').then(r=>r.json()).then(d=>{const mw=Math.max(3,7-gameState.round);gameState={word:d.word,hint:d.hint,guessed:new Set(),wrong:0,maxWrong:mw,round:gameState.round};_rHang();});}
+function _rHang(){const s=gameState;const d=s.word.split('').map(c=>s.guessed.has(c)?c.toUpperCase():'_').join(' ');const w='❌'.repeat(s.wrong)+'⬜'.repeat(s.maxWrong-s.wrong);const b='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(c=>{const u=s.guessed.has(c.toLowerCase());return '<button class="btn '+(u?'btn-ghost':'btn-primary')+' btn-sm" '+(u?'disabled':'')+' onclick="_gLetter(\''+c.toLowerCase()+'\')" style="margin:3px;min-width:34px">'+c+'</button>';}).join('');let h='<div style="font-size:34px;font-weight:800;letter-spacing:8px;margin-bottom:12px;font-family:monospace">'+d+'</div>';h+='<div style="color:var(--text2);margin-bottom:8px">💡 '+s.hint+'</div><div style="margin-bottom:8px;font-size:18px">'+w+'</div><div style="max-width:380px;text-align:center">'+b+'</div>';if(s.wrong>=s.maxWrong)h+='<div style="margin-top:12px;color:var(--danger);font-size:16px">💀 Слово: <strong>'+s.word.toUpperCase()+'</strong></div><button class="btn btn-accent btn-sm" style="margin-top:6px" onclick="startGame(\'hangman\')">🔄 Ещё</button>';else if(!d.includes('_')){addXP(10);h+='<div style="margin-top:12px;color:var(--accent);font-size:16px">🎉 Угадал! +10 XP</div><button class="btn btn-accent btn-sm" style="margin-top:6px" onclick="startGame(\'hangman\')">🔄 Ещё</button>';}renderGame(h);}
+function _gLetter(c){gameState.guessed.add(c);if(!gameState.word.includes(c))gameState.wrong++;_rHang();}
+
+function initWordMatch(){document.getElementById('game-title').textContent='🔗 Пары слов (раунд '+gameState.round+')';renderGame('<div class="spinner">Загружаю...</div>');fetch('/api/game/wordmatch').then(r=>r.json()).then(d=>{const p=d.pairs;const sh=arr=>{for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;};gameState={pairs:p,selEn:null,selRu:null,matched:new Set(),round:gameState.round};const en=sh([...p.map(x=>x.word)]),ru=sh([...p.map(x=>x.translation)]);let h='<div style="display:flex;gap:36px;flex-wrap:wrap;justify-content:center">';h+='<div><h4 style="margin-bottom:8px;color:var(--primary2)">🇬🇧</h4>';en.forEach(w=>{h+='<div class="wc" data-type="en" data-val="'+w+'" onclick="_clickCard(this)" style="padding:10px 16px;margin:4px;background:var(--surface2);border-radius:var(--radius-sm);cursor:pointer;border:2px solid transparent;display:inline-block;font-size:14px">'+w+'</div>';});h+='</div><div><h4 style="margin-bottom:8px;color:var(--accent)">🇷🇺</h4>';ru.forEach(w=>{h+='<div class="wc" data-type="ru" data-val="'+w+'" onclick="_clickCard(this)" style="padding:10px 16px;margin:4px;background:var(--surface2);border-radius:var(--radius-sm);cursor:pointer;border:2px solid transparent;display:inline-block;font-size:14px">'+w+'</div>';});h+='</div></div><div id="mscore" style="margin-top:12px;color:var(--accent);font-size:16px;font-weight:600">Найдено: 0/'+p.length+'</div><button class="btn btn-accent btn-sm" style="margin-top:8px" onclick="startGame(\'wordmatch\')">🔄 Новые</button>';renderGame(h);});}
+function _clickCard(el){if(el.style.pointerEvents==='none')return;const t=el.dataset.type,v=el.dataset.val;if(t==='en'&&gameState.selEn){gameState.selEn.el.style.borderColor='transparent';if(gameState.selEn.val===v){gameState.selEn=null;return;}}if(t==='ru'&&gameState.selRu){gameState.selRu.el.style.borderColor='transparent';if(gameState.selRu.val===v){gameState.selRu=null;return;}}el.style.borderColor=t==='en'?'var(--primary)':'var(--accent)';if(t==='en')gameState.selEn={el,v};else gameState.selRu={el,v};if(gameState.selEn&&gameState.selRu){const ev=gameState.selEn.val,rv=gameState.selRu.val,ee=gameState.selEn.el,re=gameState.selRu.el;const m=gameState.pairs.find(p=>p.word===ev&&p.translation===rv);if(m){ee.style.borderColor='var(--success)';ee.style.background='rgba(0,230,176,.08)';ee.style.pointerEvents='none';re.style.borderColor='var(--success)';re.style.background='rgba(0,230,176,.08)';re.style.pointerEvents='none';gameState.matched.add(ev);document.getElementById('mscore').textContent='Найдено: '+gameState.matched.size+'/'+gameState.pairs.length;if(gameState.matched.size===gameState.pairs.length){addXP(15);document.getElementById('mscore').textContent+=' 🎉 +15 XP';}}else{ee.style.borderColor='var(--danger)';re.style.borderColor='var(--danger)';setTimeout(()=>{ee.style.borderColor='transparent';re.style.borderColor='transparent';},400);}gameState.selEn=null;gameState.selRu=null;}}
+
+function initSpeedQuiz(){document.getElementById('game-title').textContent='⚡ Блиц-квиз (раунд '+gameState.round+')';const base=[{q:"I ___ a student.",opts:["am","is","are","be"],ans:0},{q:"'Dog' — это...",opts:["Кошка","Собака","Птица","Рыба"],ans:1},{q:"She ___ to school.",opts:["go","goes","going","went"],ans:1},{q:"Множ. 'child'",opts:["childs","children","childrens","childes"],ans:1},{q:"Антоним 'hot'",opts:["warm","cool","cold","wet"],ans:2},{q:"Yesterday I ___ TV.",opts:["watch","watches","watched","watching"],ans:2},{q:"'Thank you' — это...",opts:["Пожалуйста","Извини","Спасибо","Привет"],ans:2},{q:"The cat is ___ table.",opts:["at","in","on","by"],ans:2},{q:"He ___ a car.",opts:["have","has","had","having"],ans:1},{q:"Синоним 'big'",opts:["small","tiny","large","short"],ans:2},{q:"___ you like tea?",opts:["Does","Do","Is","Are"],ans:1},{q:"We ___ London tomorrow.",opts:["visit","visits","will visit","visited"],ans:2},{q:"She ___ played tennis.",opts:["have","has","had","is"],ans:1},{q:"'Beautiful' — это...",opts:["Умный","Красивый","Быстрый","Сильный"],ans:1},{q:"If I ___ you, I'd go.",opts:["am","was","were","be"],ans:2},{q:"They ___ playing now.",opts:["is","are","am","be"],ans:1}];const cnt=Math.min(base.length,8+gameState.round*2);const qs=base.sort(()=>Math.random()-.5).slice(0,cnt);gameState={qs,idx:0,score:0,timeLeft:60,timer:null,round:gameState.round};_rSQ();gameState.timer=setInterval(()=>{gameState.timeLeft--;const t=document.getElementById('sqt');if(t){t.textContent=gameState.timeLeft+' сек';t.style.color=gameState.timeLeft<=10?'var(--danger)':'var(--text2)';}if(gameState.timeLeft<=0){clearInterval(gameState.timer);_eSQ();}},1000);}
+function _rSQ(){const s=gameState;if(s.idx>=s.qs.length){_eSQ();return;}const q=s.qs[s.idx];let h='<div style="margin-bottom:12px;font-size:14px;color:var(--text2)">Вопрос '+(s.idx+1)+'/'+s.qs.length+' | <span id="sqt">'+s.timeLeft+' сек</span></div>';h+='<div class="q-card" style="width:100%;max-width:500px"><div class="q-text" style="font-size:17px">'+q.q+'</div><div class="q-opts">';q.opts.forEach((o,j)=>{h+='<label class="q-opt" onclick="_aSQ('+j+')"><span>'+o+'</span></label>';});h+='</div></div><div style="margin-top:10px;color:var(--accent);font-weight:600">Счёт: '+s.score+'</div>';renderGame(h);}
+function _aSQ(idx){const s=gameState;if(s.qs[s.idx].ans===idx)s.score++;s.idx++;_rSQ();}
+function _eSQ(){clearInterval(gameState.timer);const s=gameState,xp=s.score*2;addXP(xp);renderGame('<div style="text-align:center;font-size:44px;margin-bottom:12px">⏰</div><h3>Время!</h3><div style="font-size:28px;font-weight:800;color:var(--accent);margin:12px 0">'+s.score+'/'+s.qs.length+'</div><p style="color:var(--accent)">+'+xp+' XP</p><button class="btn btn-accent" style="margin-top:12px" onclick="startGame(\'speedquiz\')">🔄 Ещё</button>');}
+
+function initScramble(){document.getElementById('game-title').textContent='🔀 Анаграммы (раунд '+gameState.round+')';const base=[{word:"apple",hint:"Фрукт"},{word:"house",hint:"Дом"},{word:"water",hint:"Жидкость"},{word:"school",hint:"Учёба"},{word:"friend",hint:"Близкий человек"},{word:"music",hint:"Слушаем"},{word:"family",hint:"Родные"},{word:"travel",hint:"Путешествие"},{word:"kitchen",hint:"Готовка"},{word:"garden",hint:"Цветы"},{word:"window",hint:"Наружу"},{word:"dinner",hint:"Вечерняя еда"},{word:"market",hint:"Покупки"},{word:"bridge",hint:"Мост"},{word:"island",hint:"Остров"}];const w=base[Math.floor(Math.random()*base.length)];const sc=w.word.split('').sort(()=>Math.random()-.5).join('');gameState={word:w.word,hint:w.hint,attempts:0,round:gameState.round};renderGame('<div style="font-size:40px;font-weight:800;letter-spacing:12px;margin-bottom:12px;font-family:monospace">'+sc.toUpperCase()+'</div><div style="color:var(--text2);margin-bottom:12px">💡 '+w.hint+'</div><input type="text" id="scramble-inp" placeholder="Ответ..." style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:12px 18px;border-radius:var(--radius-sm);font-size:18px;text-align:center;width:220px;outline:none" onkeydown="if(event.key===\'Enter\')_checkScramble()"><button class="btn btn-accent" style="margin-top:10px" onclick="_checkScramble()">✅</button><div id="scramble-result" style="margin-top:10px;font-size:16px;font-weight:600"></div><button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="startGame(\'scramble\')">🔄 Другое слово</button>');}
+function _checkScramble(){const inp=document.getElementById('scramble-inp').value.trim().toLowerCase();const res=document.getElementById('scramble-result');gameState.attempts++;if(inp===gameState.word){const xp=Math.max(3,8-gameState.attempts);addXP(xp);res.innerHTML='<span style="color:var(--accent)">🎉 Правильно! +'+xp+' XP</span>';}else{res.innerHTML='<span style="color:var(--danger)">❌ Неверно. Попробуй.</span>';}}
+
+// === NEW GAME: MEMORY ===
+function initMemory(){
+    document.getElementById('game-title').textContent='🧠 Memory (раунд '+gameState.round+')';
+    const pairs=[{en:"apple",ru:"яблоко"},{en:"dog",ru:"собака"},{en:"sun",ru:"солнце"},{en:"book",ru:"книга"},{en:"water",ru:"вода"},{en:"house",ru:"дом"}];
+    const cards=[];
+    pairs.forEach((p,i)=>{cards.push({id:i*2,text:p.en,type:'en',pairId:i,flipped:false,matched:false});cards.push({id:i*2+1,text:p.ru,type:'ru',pairId:i,flipped:false,matched:false});});
+    cards.sort(()=>Math.random()-.5);
+    gameState={cards,flipped:[],matched:0,total:pairs.length,round:gameState.round};
+    _rMemory();
+}
+function _rMemory(){
+    const s=gameState;let h='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:400px">';
+    s.cards.forEach(c=>{
+        const flipped=c.flipped||c.matched;
+        h+='<div class="mem-card'+(c.matched?' matched':'')+(flipped?' flipped':'')+'" onclick="_flipCard('+c.id+')" style="aspect-ratio:1;background:'+(flipped?(c.type==='en'?'var(--primary)':'var(--accent)'):'var(--surface2)')+';border:2px solid '+(flipped?'transparent':'var(--border2)')+';border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;cursor:'+(c.matched?'default':'pointer')+';font-size:'+(flipped?'18px':'28px')+';font-weight:700;color:#fff;transition:all .3s">'+(flipped?c.text:'?')+'</div>';
+    });
+    h+='</div><div style="margin-top:12px;font-size:16px;color:var(--accent);font-weight:600">Пары: '+s.matched+'/'+s.total+'</div>';
+    if(s.matched===s.total){addXP(20);h+='<div style="color:var(--accent);font-size:18px;margin-top:8px">🎉 Все пары! +20 XP</div><button class="btn btn-accent btn-sm" style="margin-top:8px" onclick="startGame(\'memory\')">🔄 Ещё</button>';}
+    renderGame(h);
+}
+function _flipCard(id){
+    const s=gameState;const c=s.cards.find(x=>x.id===id);
+    if(!c||c.flipped||c.matched||s.flipped.length>=2)return;
+    c.flipped=true;
+    if(s.flipped.length===0){s.flipped=[c];_rMemory();return;}
+    s.flipped.push(c);_rMemory();
+    const [a,b]=s.flipped;
+    if(a.pairId===b.pairId&&a.type!==b.type){a.matched=b.matched=true;s.matched++;s.flipped=[];_rMemory();}
+    else{setTimeout(()=>{a.flipped=b.flipped=false;s.flipped=[];_rMemory();},800);}
+}
+
+// === NEW GAME: TYPING RACE ===
+function initTyping(){
+    document.getElementById('game-title').textContent='⌨️ Скоростной набор (раунд '+gameState.round+')';
+    const words=['hello','world','apple','house','water','music','school','friend','family','travel','kitchen','garden','window','market','bridge','island','dinner','breakfast','language','computer'];
+    gameState={words,idx:0,score:0,round:gameState.round,timePerWord:Math.max(2,5-gameState.round)};
+    _rTyping();
+}
+function _rTyping(){
+    const s=gameState;
+    if(s.idx>=s.words.length){const xp=s.score*3;addXP(xp);renderGame('<div style="text-align:center;font-size:48px">🏁</div><h3>Финиш!</h3><div style="font-size:28px;font-weight:800;color:var(--accent);margin:12px 0">'+s.score+'/'+s.words.length+'</div><p style="color:var(--accent)">+'+xp+' XP</p><button class="btn btn-accent" style="margin-top:12px" onclick="startGame(\'typing\')">🔄 Ещё</button>');return;}
+    const w=s.words[s.idx];
+    renderGame('<div style="font-size:42px;font-weight:800;color:var(--primary2);margin-bottom:8px;letter-spacing:4px">'+w+'</div><div style="color:var(--text2);margin-bottom:14px">Слово '+(s.idx+1)+'/'+s.words.length+' | Счёт: '+s.score+'</div><input type="text" id="type-inp" placeholder="Печатай здесь..." autofocus style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:14px 20px;border-radius:var(--radius-sm);font-size:20px;text-align:center;width:260px;outline:none" onkeydown="if(event.key===\'Enter\')_checkTyping()"><button class="btn btn-accent" style="margin-top:8px" onclick="_checkTyping()">⏎</button><div id="type-result" style="margin-top:8px;font-size:14px;font-weight:600"></div>');
+    setTimeout(()=>document.getElementById('type-inp')?.focus(),100);
+}
+function _checkTyping(){
+    const inp=document.getElementById('type-inp');if(!inp)return;
+    const val=inp.value.trim().toLowerCase();
+    const s=gameState;
+    if(val===s.words[s.idx]){s.score++;document.getElementById('type-result').innerHTML='<span style="color:var(--accent)">✅</span>';}else{document.getElementById('type-result').innerHTML='<span style="color:var(--danger)">❌ '+s.words[s.idx]+'</span>';}
+    s.idx++;inp.value='';
+    setTimeout(()=>_rTyping(),400);
+}
+
+// === NEW GAME: GRAMMAR DEFENSE ===
+function initGramDef(){
+    document.getElementById('game-title').textContent='🛡️ Грамматическая защита (раунд '+gameState.round+')';
+    const questions=[{q:"She ___ to school every day.",o:["go","goes","going","went"],a:1},{q:"I ___ a student.",o:["am","is","are","be"],a:0},{q:"They ___ playing football now.",o:["is","am","are","be"],a:2},{q:"He ___ his homework yesterday.",o:["do","does","did","done"],a:2},{q:"We ___ to London next week.",o:["go","goes","will go","went"],a:2},{q:"She ___ never been to Paris.",o:["has","have","had","having"],a:0},{q:"If I ___ you, I would go.",o:["am","was","were","be"],a:2},{q:"The book ___ on the table.",o:["am","is","are","be"],a:1},{q:"They ___ pizza every Friday.",o:["eat","eats","eating","ate"],a:0},{q:"I ___ my keys. I can't find them.",o:["lose","lost","have lost","am losing"],a:2}];
+    gameState={questions,idx:0,score:0,lives:3,round:gameState.round};
+    _rGramDef();
+}
+function _rGramDef(){
+    const s=gameState;
+    if(s.idx>=s.questions.length||s.lives<=0){const xp=s.score*3;addXP(xp);renderGame('<div style="text-align:center;font-size:48px">🛡️</div><h3>'+(s.lives<=0?'Поражение!':'Победа!')+'</h3><div style="font-size:28px;font-weight:800;color:var(--accent);margin:12px 0">'+s.score+'/'+s.questions.length+'</div><p style="color:var(--accent)">+'+xp+' XP</p><button class="btn btn-accent" style="margin-top:12px" onclick="startGame(\'gramdef\')">🔄 Ещё</button>');return;}
+    const q=s.questions[s.idx];
+    let h='<div style="margin-bottom:10px;font-size:14px;color:var(--text2)">Вопрос '+(s.idx+1)+'/'+s.questions.length+' | ❤️ '.repeat(s.lives)+'🖤 '.repeat(3-s.lives)+' | Счёт: '+s.score+'</div>';
+    h+='<div class="q-card" style="width:100%;max-width:500px"><div class="q-text" style="font-size:17px">'+q.q+'</div><div class="q-opts">';
+    q.o.forEach((o,j)=>{h+='<label class="q-opt" onclick="_aGramDef('+j+')"><span>'+o+'</span></label>';});
+    h+='</div></div>';
+    renderGame(h);
+}
+function _aGramDef(idx){
+    const s=gameState;
+    if(s.questions[s.idx].a===idx){s.score++;}else{s.lives--;}
+    s.idx++;_rGramDef();
+}
+
+// === NEW GAME: WORD BUILDER (собери слово) ===
+function initWordBuild(){
+    document.getElementById('game-title').textContent='🧱 Собери слово (раунд '+gameState.round+')';
+    const pairs=[{en:"apple",ru:"яблоко"},{en:"house",ru:"дом"},{en:"water",ru:"вода"},{en:"music",ru:"музыка"},{en:"school",ru:"школа"},{en:"friend",ru:"друг"},{en:"family",ru:"семья"},{en:"travel",ru:"путешествие"},{en:"kitchen",ru:"кухня"},{en:"garden",ru:"сад"},{en:"window",ru:"окно"},{en:"dinner",ru:"ужин"},{en:"market",ru:"рынок"},{en:"bridge",ru:"мост"},{en:"island",ru:"остров"}];
+    const p=pairs[Math.floor(Math.random()*pairs.length)];
+    const word=p.en;
+    const blanks=Math.min(word.length-1, Math.max(1, 2+gameState.round));
+    const blankPositions=new Set();
+    while(blankPositions.size<blanks){blankPositions.add(Math.floor(Math.random()*word.length));}
+    const display=word.split('').map((c,i)=>blankPositions.has(i)?'_':c).join(' ');
+    gameState={word, ru:p.ru, blanks:blankPositions, display, score:0, round:gameState.round, attempts:0};
+    _rWordBuild();
+}
+function _rWordBuild(){
+    const s=gameState;
+    let h='<div style="font-size:14px;color:var(--text2);margin-bottom:8px">Перевод: <strong style="color:var(--text)">'+s.ru+'</strong></div>';
+    h+='<div style="font-size:38px;font-weight:800;letter-spacing:6px;margin-bottom:14px;font-family:monospace">'+s.display+'</div>';
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:300px">';
+    const missingLetters=s.word.split('').filter((c,i)=>s.blanks.has(i));
+    const shuffled=[...missingLetters].sort(()=>Math.random()-.5);
+    shuffled.forEach((c,i)=>{h+='<button class="btn btn-primary btn-sm" style="min-width:40px;font-size:18px;font-family:monospace" onclick="_placeLetter(\''+c+'\','+i+')">'+c.toUpperCase()+'</button>';});
+    h+='</div>';
+    h+='<div id="wb-input" style="margin-top:10px;font-size:14px;color:var(--text3)">Нажимай буквы для вставки</div>';
+    h+='<button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="initWordBuild()">🔄 Другое слово</button>';
+    renderGame(h);
+}
+function _placeLetter(c, idx){
+    // Простая версия: заполняем первую пустую позицию выбранной буквой
+    const s=gameState;
+    s.attempts++;
+    const blankArr=Array.from(s.blanks);
+    const displayArr=s.display.split(' ');
+    // Найти первую пустую позицию
+    let placed=false;
+    for(let i=0;i<displayArr.length;i++){
+        if(displayArr[i]==='_'){
+            // Простая проверка: правильная ли буква для этой позиции
+            if(s.word[i]===c){
+                displayArr[i]=c.toUpperCase();
+                placed=true;
+                break;
+            }
+        }
+    }
+    s.display=displayArr.join(' ');
+    const allFilled=!s.display.includes('_');
+    if(allFilled){
+        const xp=Math.max(5, 15-s.attempts);
+        addXP(xp);
+        renderGame('<div style="text-align:center"><div style="font-size:48px">🎉</div><h3>Слово: <strong style="color:var(--accent)">'+s.word.toUpperCase()+'</strong></h3><p style="color:var(--accent)">+'+xp+' XP</p><button class="btn btn-accent" style="margin-top:10px" onclick="startGame(\'wordbuild\')">🔄 Ещё</button></div>');
+    } else {
+        _rWordBuild();
+    }
+}
+
+// === WORD RAIN ===
+function initWordRain(){
+    document.getElementById('game-title').textContent='🌧️ Word Rain (раунд '+gameState.round+')';
+    const pairs=[{en:"cat",ru:"кошка"},{en:"dog",ru:"собака"},{en:"sun",ru:"солнце"},{en:"book",ru:"книга"},{en:"milk",ru:"молоко"},{en:"tree",ru:"дерево"},{en:"fish",ru:"рыба"},{en:"star",ru:"звезда"},{en:"rain",ru:"дождь"},{en:"snow",ru:"снег"},{en:"bird",ru:"птица"},{en:"door",ru:"дверь"}];
+    gameState={pairs,idx:0,score:0,lives:5,round:gameState.round,activeWords:[]};
+    renderGame('<div style="text-align:center"><div style="font-size:14px;color:var(--t2);margin-bottom:12px">Вводи перевод падающих слов. ❤️ x'+gameState.lives+' | Счёт: 0</div><div style="position:relative;height:300px;border:1px solid var(--s3);border-radius:var(--radius);overflow:hidden;background:var(--s0)" id="rain-area"><div style="position:absolute;bottom:0;left:0;right:0;padding:10px"><input id="rain-inp" autofocus placeholder="Пиши перевод..." style="width:100%;background:var(--s2);border:1px solid var(--s3);color:var(--t1);padding:10px 14px;border-radius:var(--radius-sm);font-size:16px;font-family:inherit;outline:none" onkeydown="if(event.key===\'Enter\')_checkRain()"></div></div></div><div id="rain-feedback" style="text-align:center;margin-top:8px;font-size:14px;font-weight:600"></div>');
+    _spawnRainWord();
+}
+function _spawnRainWord(){
+    const s=gameState;
+    if(s.idx>=s.pairs.length||s.lives<=0){const xp=s.score*3;addXP(xp);renderGame('<div style="text-align:center"><h3>'+(s.lives<=0?'💔 Проиграно!':'🎉 Молодец!')+'</h3><div style="font-size:24px;font-weight:800;color:var(--accent)">'+s.score+'/'+s.pairs.length+'</div><p>+'+xp+' XP</p><button class="btn btn-accent" style="margin-top:10px" onclick="startGame(\'wordrain\')">🔄 Ещё</button></div>');return;}
+    const p=s.pairs[s.idx];s.idx++;
+    const el=document.createElement('div');
+    el.textContent=p.en;el.className='rain-word';
+    el.style.cssText='position:absolute;top:-30px;left:'+(10+Math.random()*70)+'%;font-size:18px;font-weight:700;color:var(--accent-2);white-space:nowrap;animation:rainFall '+(3+Math.random()*2)+'s linear forwards';
+    el.dataset.ru=p.ru;
+    document.getElementById('rain-area').appendChild(el);
+    s.activeWords.push(el);
+    el.addEventListener('animationend',()=>{if(el.parentNode){el.remove();s.lives--;_updateRainUI();if(s.lives<=0)_endRain();}});
+    setTimeout(()=>_spawnRainWord(),1500);
+}
+function _checkRain(){
+    const inp=document.getElementById('rain-inp');if(!inp)return;
+    const val=inp.value.trim().toLowerCase();inp.value='';inp.focus();
+    const s=gameState;
+    let found=null;
+    for(let i=s.activeWords.length-1;i>=0;i--){
+        const w=s.activeWords[i];
+        if(w.dataset.ru.toLowerCase()===val&&w.parentNode){found=w;break;}
+    }
+    if(found){s.score++;found.style.background='var(--success)';found.style.color='#000';found.style.borderRadius='4px';found.style.padding='2px 8px';setTimeout(()=>found.remove(),300);s.activeWords=s.activeWords.filter(w=>w!==found);document.getElementById('rain-feedback').innerHTML='<span style="color:var(--success)">✅ Правильно!</span>';}
+    else{document.getElementById('rain-feedback').innerHTML='<span style="color:var(--danger)">❌ Нет такого слова</span>';}
+    _updateRainUI();
+}
+function _updateRainUI(){
+    const s=gameState;
+    const area=document.getElementById('rain-area');
+    if(area){const header=area.previousElementSibling;if(header)header.innerHTML='Вводи перевод. ❤️ x'+s.lives+' | Счёт: '+s.score+' | Слово '+s.idx+'/'+s.pairs.length;}
+}
+function _endRain(){const s=gameState;s.lives=0;clearTimeout(s._timer);}
+
+// === SENTENCE BUILDER ===
+function initSentBuild(){
+    document.getElementById('game-title').textContent='🧩 Собери предложение (раунд '+gameState.round+')';
+    const sentences=[{words:["I","go","to","school","every","day"],order:[0,1,2,3,4,5],ru:"Я хожу в школу каждый день"},{words:["She","likes","to","read","books"],order:[0,1,2,3,4],ru:"Она любит читать книги"},{words:["They","are","playing","football","now"],order:[0,1,2,3,4],ru:"Они играют в футбол сейчас"},{words:["He","has","never","been","to","Paris"],order:[0,1,2,3,4,5],ru:"Он никогда не был в Париже"},{words:["We","will","visit","grandma","tomorrow"],order:[0,1,2,3,4],ru:"Мы навестим бабушку завтра"}];
+    const s=sentences[Math.floor(Math.random()*sentences.length)];
+    const shuffled=[...s.words].sort(()=>Math.random()-.5);
+    gameState={correct:s.words.join(' '),ru:s.ru,shuffled,selected:[],round:gameState.round};
+    _renderSentBuild();
+}
+function _renderSentBuild(){
+    const s=gameState;
+    let h='<div style="color:var(--t2);margin-bottom:10px;font-size:14px">🇷🇺 '+s.ru+'</div>';
+    h+='<div style="min-height:44px;background:var(--s2);border:1px solid var(--s3);border-radius:var(--radius);padding:10px;margin-bottom:10px;display:flex;flex-wrap:wrap;gap:6px" id="sb-built">';
+    s.selected.forEach((w,i)=>{h+='<span class="sb-word" onclick="_sbRemove('+i+')" style="padding:6px 12px;background:var(--accent);color:#fff;border-radius:var(--radius-sm);font-size:14px;cursor:pointer;transition:all var(--ts)">'+w+'</span>';});
+    h+='</div>';
+    h+='<div style="display:flex;flex-wrap:wrap;gap:6px">';
+    s.shuffled.forEach((w,i)=>{if(!s.selected.includes(w)||s.selected.filter(x=>x===w).length<s.shuffled.filter(x=>x===w).length){h+='<span class="sb-word" onclick="_sbAdd(\''+w+'\')" style="padding:6px 12px;background:var(--s2);border:1px solid var(--s3);border-radius:var(--radius-sm);font-size:14px;cursor:pointer;transition:all var(--ts)">'+w+'</span>';}});
+    h+='</div><button class="btn btn-accent" style="margin-top:12px" onclick="_sbCheck()">✅ Проверить</button><button class="btn btn-ghost btn-sm" style="margin-top:12px;margin-left:6px" onclick="startGame(\'sentbuild\')">🔄 Новое</button>';
+    h+='<div id="sb-result" style="margin-top:8px;font-size:14px;font-weight:600"></div>';
+    renderGame(h);
+}
+function _sbAdd(w){gameState.selected.push(w);_renderSentBuild();}
+function _sbRemove(i){gameState.selected.splice(i,1);_renderSentBuild();}
+function _sbCheck(){
+    const s=gameState;
+    const built=s.selected.join(' ');
+    if(built===s.correct){addXP(10);document.getElementById('sb-result').innerHTML='<span style="color:var(--success)">🎉 Правильно! +10 XP</span>';setTimeout(()=>startGame('sentbuild'),1500);}
+    else{document.getElementById('sb-result').innerHTML='<span style="color:var(--danger)">❌ Неправильно. Правильно: '+s.correct+'</span>';}
+}
+
+// === DICTATION ===
+function initDictation(){
+    document.getElementById('game-title').textContent='👂 Диктант (раунд '+gameState.round+')';
+    const words=["hello","world","apple","house","water","music","school","friend","family","travel","kitchen","garden"];
+    const w=words[Math.floor(Math.random()*words.length)];
+    gameState={word:w,round:gameState.round};
+    let h='<div style="font-size:14px;color:var(--t2);margin-bottom:12px">Нажми 🔊 — прослушай слово и напиши его</div>';
+    h+='<button class="btn btn-accent btn-lg" onclick="_playDictation()" style="margin-bottom:12px">🔊 Прослушать</button>';
+    h+='<input type="text" id="dict-inp" placeholder="Напиши слово..." style="background:var(--s2);border:1px solid var(--s3);color:var(--t1);padding:14px 18px;border-radius:var(--radius);font-size:20px;text-align:center;width:260px;font-family:inherit;outline:none" onkeydown="if(event.key===\'Enter\')_checkDictation()">';
+    h+='<button class="btn btn-accent" style="margin-top:8px" onclick="_checkDictation()">✅ Проверить</button>';
+    h+='<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="startGame(\'dictation\')">🔄 Новое слово</button>';
+    h+='<div id="dict-result" style="margin-top:8px;font-size:14px;font-weight:600"></div>';
+    renderGame(h);
+}
+function _playDictation(){
+    const u=new SpeechSynthesisUtterance(gameState.word);u.lang='en-US';u.rate=0.8;
+    speechSynthesis.cancel();speechSynthesis.speak(u);
+}
+function _checkDictation(){
+    const inp=document.getElementById('dict-inp');if(!inp)return;
+    const val=inp.value.trim().toLowerCase();
+    if(val===gameState.word){addXP(5);document.getElementById('dict-result').innerHTML='<span style="color:var(--success)">🎉 Правильно! +5 XP</span>';setTimeout(()=>startGame('dictation'),1200);}
+    else{document.getElementById('dict-result').innerHTML='<span style="color:var(--danger)">❌ Слово: <strong>'+gameState.word+'</strong></span>';}
+}
+
+// === ERROR HUNTER ===
+function initErrHunt(){
+    document.getElementById('game-title').textContent='🔍 Охота на ошибки (раунд '+gameState.round+')';
+    const questions=[{wrong:"She go to school every day.",correct:"She goes to school every day.",explain:"go → goes (3 лицо, Present Simple)"},{wrong:"I have seen him yesterday.",correct:"I saw him yesterday.",explain:"have seen → saw (yesterday — Past Simple, не Present Perfect)"},{wrong:"He don't like coffee.",correct:"He doesn't like coffee.",explain:"don't → doesn't (he/she/it)"},{wrong:"If I will see her, I will tell her.",correct:"If I see her, I will tell her.",explain:"will see → see (в if-части условного предложения — Present Simple)"},{wrong:"The book was wrote by him.",correct:"The book was written by him.",explain:"wrote → written (третья форма глагола в пассиве)"}];
+    const q=questions[Math.floor(Math.random()*questions.length)];
+    gameState={q,round:gameState.round,attempts:0};
+    let h='<div style="max-width:500px;margin:0 auto"><div class="q-card"><div class="q-badge">Найди ошибку</div><div class="q-text" style="font-size:20px;color:var(--danger)">'+q.wrong+'</div></div>';
+    h+='<input type="text" id="err-inp" placeholder="Напиши исправленное предложение..." style="width:100%;max-width:500px;background:var(--s2);border:1px solid var(--s3);color:var(--t1);padding:14px;border-radius:var(--radius);font-size:15px;font-family:inherit;outline:none;margin-top:10px" onkeydown="if(event.key===\'Enter\')_checkErr()">';
+    h+='<button class="btn btn-accent" style="margin-top:10px" onclick="_checkErr()">✅ Проверить</button><button class="btn btn-ghost btn-sm" style="margin-top:10px;margin-left:6px" onclick="startGame(\'errhunt\')">🔄 Новое</button>';
+    h+='<div id="err-result" style="margin-top:10px;font-size:14px;font-weight:600"></div></div>';
+    renderGame(h);setTimeout(()=>document.getElementById('err-inp')?.focus(),100);
+}
+function _checkErr(){
+    const inp=document.getElementById('err-inp');if(!inp)return;
+    const val=inp.value.trim();gameState.attempts++;
+    if(val.toLowerCase()===gameState.q.correct.toLowerCase()){const xp=Math.max(5,12-gameState.attempts*2);addXP(xp);document.getElementById('err-result').innerHTML='<span style="color:var(--success)">🎉 Верно! +'+xp+' XP<br>'+gameState.q.explain+'</span>';}
+    else{document.getElementById('err-result').innerHTML='<span style="color:var(--danger)">❌ Не совсем. Правильно: <strong>'+gameState.q.correct+'</strong><br>'+gameState.q.explain+'</span>';}
+}
+</script>
+{% endblock %}
