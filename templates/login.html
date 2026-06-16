@@ -72,11 +72,14 @@ fetch('/api/get_key').then(r=>r.json()).then(d=>{
 async function saveKey() {
     const key = document.getElementById('api-key').value.trim();
     if (!key) return;
+    const el = document.getElementById('key-saved');
+    el.textContent = '⏳ Проверяю ключ...'; el.style.display = 'block'; el.style.color = 'var(--t2)';
     const r = await fetch('/api/save_key', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key})});
     const d = await r.json();
-    const el = document.getElementById('key-saved');
-    if (d.ok) { el.textContent = '✅ Ключ сохранён'; el.style.display = 'block'; setTimeout(()=>el.style.display='none',2000); }
-    else { el.textContent = '❌ Ошибка'; el.style.display = 'block'; }
+    if (d.ok) { el.textContent = '✅ Ключ работает и сохранён'; el.style.color = 'var(--success)'; }
+    else { el.textContent = '❌ ' + (d.error || 'Ошибка'); el.style.color = 'var(--danger)'; }
+    el.style.display = 'block';
+    setTimeout(()=>el.style.display='none',4000);
 }
 </script>
 </body>

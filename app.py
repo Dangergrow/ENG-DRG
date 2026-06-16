@@ -47,17 +47,45 @@ def check_user():
 def api_save_key():
     data = request.get_json()
     key = data.get("key", "").strip()
-    if key:
-        import sys
-        if getattr(sys, 'frozen', False):
-            base = os.path.dirname(sys.executable)
-        else:
-            base = os.path.dirname(os.path.abspath(__file__))
-        keypath = os.path.join(base, "apikey.txt")
-        with open(keypath, "w") as f:
-            f.write(key)
-        return jsonify({"ok": True})
-    return jsonify({"ok": False, "error": "Empty key"}), 400
+    if not key:
+        return jsonify({"ok": False, "error": "Empty key"}), 400
+
+    # Проверка ключа — тестовый запрос к OpenRouter
+    try:
+        from openai import OpenAI
+        test_client = OpenAI(api_key=key, base_url="https://openrouter.ai/api/v1")
+        resp = test_client.chat.completions.create(
+            model="openai/gpt-oss-120b:free",
+            messages=[{"role": "user", "content": "hi"}],
+            max_tokens=5
+        )
+        # Ключ работает — сохраняем
+    except Exception as e:
+        err = str(e)
+        if "401" in err or "403" in err:
+            return jsonify({"ok": False, "error": "Неверный API-ключ. Проверь и попробуй снова."})
+        return jsonify({"ok": False, "error": f"Ошибка проверки: {err[:100]}"})
+
+    # Сохранение в папку SaveDRG
+    from config import _get_save_dir
+    savedir = _get_save_dir() if callable(getattr(__import__('config'), '_get_save_dir', None)) else os.path.join(os.path.dirname(os.path.abspath(__file__)), "SaveDRG")
+    # Используем тот же путь что и для БД
+    import sys
+    if getattr(sys, 'frozen', False):
+        base = os.path.dirname(sys.executable)
+    else:
+        base = os.path.dirname(os.path.abspath(__file__))
+    savedir = os.path.join(base, "SaveDRG")
+    os.makedirs(savedir, exist_ok=True)
+    keypath = os.path.join(savedir, "apikey.txt")
+    with open(keypath, "w") as f:
+        f.write(key)
+
+    # Обновить ключ в конфиге
+    import config
+    config.OPENROUTER_API_KEY = key
+
+    return jsonify({"ok": True})
 
 
 @app.route("/api/get_key")
@@ -67,7 +95,7 @@ def api_get_key():
         base = os.path.dirname(sys.executable)
     else:
         base = os.path.dirname(os.path.abspath(__file__))
-    keypath = os.path.join(base, "apikey.txt")
+    keypath = os.path.join(base, "SaveDRG", "apikey.txt")
     if os.path.exists(keypath):
         with open(keypath, "r") as f:
             return jsonify({"key": f.read().strip()})

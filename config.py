@@ -4,13 +4,13 @@ import os
 AI_BACKEND = "openrouter"
 
 def _read_key():
-    # Ключ из файла apikey.txt (рядом с .exe или .py)
     import sys
     if getattr(sys, 'frozen', False):
         base = os.path.dirname(sys.executable)
     else:
         base = os.path.dirname(os.path.abspath(__file__))
-    keyfile = os.path.join(base, "apikey.txt")
+    # Ключ в папке SaveDRG
+    keyfile = os.path.join(base, "SaveDRG", "apikey.txt")
     if os.path.exists(keyfile):
         with open(keyfile, "r") as f:
             return f.read().strip()
