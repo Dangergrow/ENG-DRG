@@ -6,6 +6,7 @@ from lessons import get_lessons_for_level, LEVEL_NAMES, LEVEL_ORDER, get_next_le
 from config import SECRET_KEY, DEBUG
 from tts import get_tts_audio_path
 import json
+import os
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
@@ -41,6 +42,18 @@ def check_user():
 
 
 # === АВТОРИЗАЦИЯ ===
+
+@app.route("/api/save_key", methods=["POST"])
+def api_save_key():
+    data = request.get_json()
+    key = data.get("key", "").strip()
+    if key:
+        keypath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "apikey.txt")
+        with open(keypath, "w") as f:
+            f.write(key)
+        return jsonify({"ok": True})
+    return jsonify({"ok": False, "error": "Empty key"}), 400
+
 
 @app.route("/login")
 def login_page():

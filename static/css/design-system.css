@@ -237,3 +237,14 @@ a{color:var(--accent-2);text-decoration:none;transition:color var(--ts)}a:hover{
 @keyframes voicePulse{0%{box-shadow:0 0 0 0 color-mix(in oklch,var(--danger) 50%,transparent)}100%{box-shadow:0 0 0 14px color-mix(in oklch,var(--danger) 0%,transparent)}}
 @keyframes rainFall{from{top:-30px}to{top:100%}}
 @media(max-width:768px){.sidebar{width:100%;height:auto;position:relative;flex-direction:row;flex-wrap:wrap;padding:8px;gap:2px;overflow-x:auto;bottom:auto}.sidebar .logo{display:none}.sidebar .nav-section{display:none}.sidebar .nav-item{padding:7px 10px;font-size:12px}.sidebar .sidebar-footer{display:none}.content{margin-left:0}.content-inner{padding:16px 12px 60px}.chat-wrap{left:0}.chat-inner{padding:0 12px}.game-cards{grid-template-columns:repeat(2,1fr)}.achievements{grid-template-columns:repeat(2,1fr)}.grid-2{grid-template-columns:1fr}.stats-row{grid-template-columns:repeat(2,1fr)}.stats-grid{grid-template-columns:repeat(2,1fr)}.actions-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* ═══ CSS-алиасы для старых имён переменных (игры, старые шаблоны) ═══ */
+:root {
+  --primary: var(--accent);
+  --primary2: var(--accent-2);
+  --surface2: var(--s2);
+  --border2: var(--s3);
+  --text: var(--t1);
+  --text2: var(--t2);
+  --text3: var(--t3);
+}

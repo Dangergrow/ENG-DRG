@@ -33,6 +33,15 @@
             <button onclick="doRegister()" class="btn btn-accent" style="padding:12px 24px">Войти</button>
         </div>
         <div id="login-error" style="color:var(--danger);font-size:12px;margin-top:8px;display:none"></div>
+
+        <div class="section-label" style="margin-top:28px">🔑 API-ключ OpenRouter</div>
+        <div style="display:flex;gap:8px;margin-bottom:4px">
+            <input type="text" id="api-key" placeholder="sk-or-v1-..."
+                style="flex:1;background:var(--s2);border:1px solid var(--s3);color:var(--t1);padding:10px 14px;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;outline:none">
+            <button onclick="saveKey()" class="btn btn-ghost btn-sm" style="white-space:nowrap">💾</button>
+        </div>
+        <div style="font-size:10px;color:var(--t3);text-align:left">Бесплатный ключ: <a href="https://openrouter.ai" target="_blank">openrouter.ai</a> → API Keys</div>
+        <div id="key-saved" style="color:var(--success);font-size:11px;margin-top:4px;display:none"></div>
     </div>
 </div>
 
@@ -54,6 +63,16 @@ async function doRegister() {
     showErr(d.error || 'Ошибка');
 }
 function showErr(msg) { const e = document.getElementById('login-error'); e.textContent = msg; e.style.display = 'block'; }
+
+async function saveKey() {
+    const key = document.getElementById('api-key').value.trim();
+    if (!key) return;
+    const r = await fetch('/api/save_key', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key})});
+    const d = await r.json();
+    const el = document.getElementById('key-saved');
+    if (d.ok) { el.textContent = '✅ Ключ сохранён'; el.style.display = 'block'; setTimeout(()=>el.style.display='none',2000); }
+    else { el.textContent = '❌ Ошибка'; el.style.display = 'block'; }
+}
 </script>
 </body>
 </html>
