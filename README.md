@@ -23,14 +23,20 @@
 - **Словарь** с интервальным повторением (алгоритм SM-2)
 - **22 достижения** + система XP
 - **Мульти-профили** для всей семьи
-- **ИИ-учитель** через OpenRouter (бесплатные модели)
+- **ИИ-учитель** — поддерживает OpenRouter, OpenAI, DeepSeek, GigaChat, Groq, Together, Mistral, Perplexity, Fireworks и любой OpenAI-совместимый API
 - **Нативное Windows-окно** (PyWebView + Edge WebView2)
+- **API-ключ** — настраивается при входе, проверяется тестовым запросом, сохраняется в `SaveDRG/`
 
 ## Установка
 
 Скачай `DRGENG.exe` из [Releases](https://github.com/Dangergrow/ENG-DRG/releases). Запусти — приложение откроется в собственном окне.
 
-Ни Python, ни браузер не нужны. Данные сохраняются в папке `SaveDRG` рядом с `.exe`.
+Ни Python, ни браузер не нужны. Данные сохраняются в папке `SaveDRG` рядом с `.exe`. API-ключ вводится на странице входа и проверяется тестовым запросом.
+
+**Бесплатные API-ключи:**
+- [OpenRouter](https://openrouter.ai/settings/keys) — бесплатные модели
+- [Google AI Studio](https://aistudio.google.com/apikey) — Gemini Flash, без карты
+- [Groq](https://console.groq.com/keys) — быстрые Llama, бесплатный тир
 
 ## Разработка
 
