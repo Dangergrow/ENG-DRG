@@ -48,11 +48,30 @@ def api_save_key():
     data = request.get_json()
     key = data.get("key", "").strip()
     if key:
-        keypath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "apikey.txt")
+        import sys
+        if getattr(sys, 'frozen', False):
+            base = os.path.dirname(sys.executable)
+        else:
+            base = os.path.dirname(os.path.abspath(__file__))
+        keypath = os.path.join(base, "apikey.txt")
         with open(keypath, "w") as f:
             f.write(key)
         return jsonify({"ok": True})
     return jsonify({"ok": False, "error": "Empty key"}), 400
+
+
+@app.route("/api/get_key")
+def api_get_key():
+    import sys
+    if getattr(sys, 'frozen', False):
+        base = os.path.dirname(sys.executable)
+    else:
+        base = os.path.dirname(os.path.abspath(__file__))
+    keypath = os.path.join(base, "apikey.txt")
+    if os.path.exists(keypath):
+        with open(keypath, "r") as f:
+            return jsonify({"key": f.read().strip()})
+    return jsonify({"key": ""})
 
 
 @app.route("/login")

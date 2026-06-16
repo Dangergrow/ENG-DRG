@@ -64,6 +64,11 @@ async function doRegister() {
 }
 function showErr(msg) { const e = document.getElementById('login-error'); e.textContent = msg; e.style.display = 'block'; }
 
+// Загрузить сохранённый ключ
+fetch('/api/get_key').then(r=>r.json()).then(d=>{
+    if (d.key) document.getElementById('api-key').value = d.key;
+});
+
 async function saveKey() {
     const key = document.getElementById('api-key').value.trim();
     if (!key) return;
