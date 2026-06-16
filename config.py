@@ -1,6 +1,7 @@
 import os
 
 # === AI Backend (настраивается через страницу входа) ===
+AI_BACKEND = "openrouter"
 
 def _read_key():
     key = _read_setting("apikey")
