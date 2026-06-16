@@ -34,13 +34,26 @@
         </div>
         <div id="login-error" style="color:var(--danger);font-size:12px;margin-top:8px;display:none"></div>
 
-        <div class="section-label" style="margin-top:28px">🔑 API-ключ OpenRouter</div>
+        <div class="section-label" style="margin-top:28px">🔑 API-ключ</div>
+        <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+            <button onclick="setProvider('openrouter')" class="btn btn-ghost btn-sm" style="font-size:10px">OpenRouter</button>
+            <button onclick="setProvider('openai')" class="btn btn-ghost btn-sm" style="font-size:10px">OpenAI</button>
+            <button onclick="setProvider('deepseek')" class="btn btn-ghost btn-sm" style="font-size:10px">DeepSeek</button>
+            <button onclick="setProvider('groq')" class="btn btn-ghost btn-sm" style="font-size:10px">Groq</button>
+            <button onclick="setProvider('together')" class="btn btn-ghost btn-sm" style="font-size:10px">Together</button>
+            <button onclick="setProvider('custom')" class="btn btn-ghost btn-sm" style="font-size:10px">Свой</button>
+        </div>
         <div style="display:flex;gap:8px;margin-bottom:4px">
-            <input type="text" id="api-key" placeholder="sk-or-v1-..."
+            <input type="text" id="api-key" placeholder="Ключ API..."
                 style="flex:1;background:var(--s2);border:1px solid var(--s3);color:var(--t1);padding:10px 14px;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;outline:none">
             <button onclick="saveKey()" class="btn btn-ghost btn-sm" style="white-space:nowrap">💾</button>
         </div>
-        <div style="font-size:10px;color:var(--t3);text-align:left">Бесплатный ключ: <a href="https://openrouter.ai" target="_blank">openrouter.ai</a> → API Keys</div>
+        <div style="display:flex;gap:6px;margin-bottom:4px">
+            <input type="text" id="api-url" placeholder="URL API..."
+                style="flex:2;background:var(--s2);border:1px solid var(--s3);color:var(--t1);padding:8px 12px;border-radius:var(--radius-sm);font-family:inherit;font-size:11px;outline:none">
+            <input type="text" id="api-model" placeholder="Модель..."
+                style="flex:1;background:var(--s2);border:1px solid var(--s3);color:var(--t1);padding:8px 12px;border-radius:var(--radius-sm);font-family:inherit;font-size:11px;outline:none">
+        </div>
         <div id="key-saved" style="color:var(--success);font-size:11px;margin-top:4px;display:none"></div>
     </div>
 </div>
@@ -64,22 +77,41 @@ async function doRegister() {
 }
 function showErr(msg) { const e = document.getElementById('login-error'); e.textContent = msg; e.style.display = 'block'; }
 
-// Загрузить сохранённый ключ
+// Загрузить сохранённые настройки
 fetch('/api/get_key').then(r=>r.json()).then(d=>{
-    if (d.key) document.getElementById('api-key').value = d.key;
+    document.getElementById('api-key').value = d.apikey || '';
+    document.getElementById('api-url').value = d.base_url || '';
+    document.getElementById('api-model').value = d.model || '';
 });
 
 async function saveKey() {
     const key = document.getElementById('api-key').value.trim();
+    const base_url = document.getElementById('api-url').value.trim();
+    const model = document.getElementById('api-model').value.trim();
     if (!key) return;
     const el = document.getElementById('key-saved');
     el.textContent = '⏳ Проверяю ключ...'; el.style.display = 'block'; el.style.color = 'var(--t2)';
-    const r = await fetch('/api/save_key', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key})});
+    const r = await fetch('/api/save_key', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key, base_url, model})});
     const d = await r.json();
     if (d.ok) { el.textContent = '✅ Ключ работает и сохранён'; el.style.color = 'var(--success)'; }
     else { el.textContent = '❌ ' + (d.error || 'Ошибка'); el.style.color = 'var(--danger)'; }
     el.style.display = 'block';
-    setTimeout(()=>el.style.display='none',4000);
+    setTimeout(()=>el.style.display='none',5000);
+}
+
+function setProvider(p) {
+    const presets = {
+        openrouter: {url:'https://openrouter.ai/api/v1', model:'openai/gpt-oss-120b:free'},
+        openai: {url:'https://api.openai.com/v1', model:'gpt-4o-mini'},
+        deepseek: {url:'https://api.deepseek.com', model:'deepseek-chat'},
+        groq: {url:'https://api.groq.com/openai/v1', model:'llama-3.3-70b-versatile'},
+        together: {url:'https://api.together.xyz/v1', model:'meta-llama/Llama-3.3-70B-Instruct-Turbo'},
+        custom: {url:'', model:''}
+    };
+    const pr = presets[p];
+    document.getElementById('api-url').value = pr.url;
+    document.getElementById('api-model').value = pr.model;
+    if (p === 'custom') { document.getElementById('api-url').focus(); }
 }
 </script>
 </body>
